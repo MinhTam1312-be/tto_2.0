@@ -527,7 +527,7 @@ Route::prefix('client')->group(function () {
     Route::patch('update-status-course/{enrollment_id}', [EnrollmentApiController::class, 'updateStatusCourse'])->middleware('auth.api');
     // Đánh giá sao và feedback cho khóa học
     Route::patch('add-feedback/{course_id}', [EnrollmentApiController::class, 'addFeedback'])->middleware('auth.api');
-    // Chuyển trạng thái khóa học thành côngcông
+    // Chuyển trạng thái khóa học thành công
     Route::patch('change-status-course-completed/{course_id}', [EnrollmentApiController::class, 'changeStatusCourseCompleted'])->middleware('auth.api');
     // Cấp chứng chỉ cho người dùng
     Route::post('add-certificate/{course_id}', [CertificateController::class, 'sendMailCertificate'])->middleware('auth.api');

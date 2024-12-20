@@ -84,7 +84,7 @@ class EnrollmentApiController extends Controller
         //
     }
 
-    // Lấy ra feedback theo sao và limit
+    // Lấy ra feedback theo sao và limit (đã sửa)
     public function feedbackLimit($star, $limit)
     {
         try {
@@ -106,12 +106,13 @@ class EnrollmentApiController extends Controller
             }
 
             // Lấy các feedback có rating_course >= $star và feedback_text khác null
-            $feedbacks = Enrollment::with(['module.course', 'user']) // Lấy thông tin từ Module, Course và User
+            $feedbacks = Enrollment::with(['course', 'user']) // Lấy thông tin từ Module, Course và User
                 ->where('rating_course', '>=', $star) // Lọc theo rating_course
                 ->whereNotNull('feedback_text') // Đảm bảo feedback_text khác null
                 ->where('feedback_text', '!=', '')
                 ->limit($limit) // Giới hạn số lượng bản ghi
                 ->get();
+            // dd($feedbacks);
 
             if ($feedbacks->isEmpty()) {
                 return response()->json([
@@ -123,9 +124,8 @@ class EnrollmentApiController extends Controller
 
             $result = $feedbacks->map(function ($feedback) {
                 return [
-                    'module_id' => optional($feedback->module)->id,
-                    'course_id' => optional($feedback->module->course)->id,
-                    'img_course' => optional($feedback->module->course)->img_course,
+                    'course_id' => optional($feedback->course)->id,
+                    'img_course' => optional($feedback->course)->img_course,
                     'user_id' => optional($feedback->user)->id,
                     'rating_course' => $feedback->rating_course,
                     'feedback_text' => $feedback->feedback_text,
@@ -146,7 +146,7 @@ class EnrollmentApiController extends Controller
         }
     }
 
-    // Chức năng đăng ký khóa học của học viên
+    // Chức năng đăng ký khóa học của học viên (đã sửa) 
     public function userRegisterCourse($course_id)
     {
         try {
@@ -178,42 +178,38 @@ class EnrollmentApiController extends Controller
         }
     }
 
-    // Đã sửa xóa module ra và truyền course_id vào Enrollment
+    // Đã sửa xóa module ra và truyền course_id vào Enrollment (Không xài tới)
     public function checkEnrollment($courseId)
-    {
-        try {
-            $user = auth('api')->user();
-            if (!$user) {
-                return response()->json(['message' => 'Người dùng chưa đăng nhập.'], 401);
-            }
+{
+    try {
+        // Lấy người dùng hiện tại
+        $user = auth('api')->user();
 
-            // Lấy danh sách module của khóa học
-            $existingEnrollmentflag = Enrollment::where('user_id', $user->id)
-                ->where('course_id', $courseId)
-                ->where('del_flag', false)
-                ->exists();
-            if ($existingEnrollmentflag) {
-                return response()->json(['message' => 'Enrollment này đang bị ẩn.'], 404);
-            }
-            // Kiểm tra xem người dùng đã đăng ký module nào trong khóa học này chưa
-            $enrollmentExists = Enrollment::where('user_id', $user->id)
-                ->where('enroll', true)
-                ->whereIn('course_id', $courseId)
-                ->exists();
-
-            return response()->json(['is_enrolled' => $enrollmentExists], 200);
-        } catch (ModelNotFoundException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Bài viết không được tìm thấy.',
-            ], 404); // Trả về mã lỗi 404
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Có lỗi xảy ra.'], 500);
+        if (!$user) {
+            return response()->json(['message' => 'Người dùng chưa đăng nhập.'], 401);
         }
+
+        // Kiểm tra xem người dùng đã đăng ký khóa học hay chưa
+        $enrollmentExists = Enrollment::where([
+            ['user_id', $user->id],
+            ['course_id', $courseId],
+            ['enroll', true],
+            ['del_flag', true] // del_flag = true tức là còn hoạt động
+        ])->exists();
+
+        return response()->json([
+            'is_enrolled' => $enrollmentExists
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Đã xảy ra lỗi: ' . $e->getMessage()
+        ], 500);
     }
+}
+
 
     // Gọi ra các feedback của khóa học
-    // Đã sửa xóa module ra và truyền course_id vào Enrollment
+    // Đã sửa xóa module ra và truyền course_id vào Enrollment (đã sửa)
     public function feedbackCourse($course_id, $star, $limit)
     {
         try {
@@ -274,7 +270,7 @@ class EnrollmentApiController extends Controller
         }
     }
 
-    //Lấy ra tiến độ của các khóa học cho người dùng
+    //Lấy ra tiến độ của các khóa học cho người dùng (đã sửa)
     public function getProgress($orderBy = null): JsonResponse
     {
         try {
@@ -375,128 +371,34 @@ class EnrollmentApiController extends Controller
         }
     }
 
-    // Cập nhật trạng thái khóa học của người dùng.
-    public function updateStatusCourse(Request $request, $enrollment_id): JsonResponse
-    {
-        try {
-            $enrollment = Enrollment::find($enrollment_id);
-
-            if (!$enrollment) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Không tìm thấy bản ghi enrollment.'
-                ], 404);
-            }
-
-            if (!$enrollment->del_flag || !$enrollment->enroll) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Enrollment không hợp lệ. Yêu cầu del_flag và enroll phải là true.'
-                ], 400);
-            }
-
-            $user = auth('api')->user();
-
-            if (!$user || $user->id !== $enrollment->user_id) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Bạn không có quyền thực hiện hành động này.'
-                ], 403);
-            }
-
-            $watchedVideos = $enrollment->status_docs()->where('status_doc', true)->count();
-
-            $course = $enrollment->module?->course;
-
-            if (!$course) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Không tìm thấy khóa học liên quan đến enrollment này.'
-                ], 404);
-            }
-
-            $numDocuments = $course->chapters->flatMap(function ($chapter) {
-                return $chapter->documents;
-            })->count();
-
-            $progressPercentage = $numDocuments > 0 ? round(($watchedVideos / $numDocuments) * 100, 1) : 0;
-
-            // Kiểm tra nếu tiến độ lớn hơn 100
-            if ($progressPercentage > 100) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Tiến độ vượt quá 100%. Vui lòng kiểm tra lại dữ liệu.'
-                ], 400);
-            }
-
-            // Nếu tiến độ bằng 100, cập nhật trạng thái
-            if ($progressPercentage === 100.0) {
-                $enrollment->status_course = 'completed';
-                if ($enrollment->save()) {
-                    return response()->json([
-                        'status' => 'success',
-                        'message' => 'Cập nhật trạng thái thành công: Hoàn thành.',
-                        'data' => [
-                            'enrollment_id' => $enrollment->id,
-                            'status_course' => $enrollment->status_course,
-                            'progressPercentage' => $progressPercentage
-                        ]
-                    ], 200);
-                } else {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Không thể cập nhật trạng thái khóa học.'
-                    ], 500);
-                }
-            }
-
-            return response()->json([
-                'status' => 'info',
-                'message' => 'Tiến độ chưa đạt 100%.',
-                'progress_percentage' => $progressPercentage,
-                'status_course' => $enrollment->status_course
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Đã xảy ra lỗi: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-
-    // Lấy ra tiến độ của một khóa học cho người dùng
+    // Lấy ra tiến độ của một khóa học cho người dùng (đã sửa)
     public function getProgressByCourse($course_id)
     {
         try {
             $user_id = auth('api')->user()->id;
             $enrollments = Enrollment::where('user_id', $user_id)
                 ->where('enroll', true)
-                ->where('enrollments.del_flag', true)
+                ->where('del_flag', true)
                 ->with([
-                    'module' => function ($query) use ($course_id) {
-                        $query->with([
-                            'course' => function ($query) use ($course_id) {
-                                $query->where('courses.del_flag', true)->where('courses.id', $course_id)->with([
-                                    'chapters' => function ($query) {
-                                        $query->with(['documents']); // Không kiểm tra del_flag cho documents
-                                    }
-                                ]);
-                            }
-                        ]);
+                    'course' => function ($query) use ($course_id) {
+                        $query->where('del_flag', true)
+                            ->where('id', $course_id)
+                            ->where('status_course', 'success')
+                            ->with([
+                                'chapters' => function ($query) {
+                                    $query->with('documents'); // Không kiểm tra del_flag cho documents
+                                }
+                            ]);
                     },
-                    'status_docs' => function ($query) {
-                        // Không kiểm tra del_flag trong status_docs
-                    }
+                    'status_docs' // Không kiểm tra del_flag trong status_docs
                 ])
                 ->get();
             // Khởi tạo mảng chứa thông tin khóa học
             $courses = $enrollments->map(function ($enrollment) {
-                $module = $enrollment->module;
 
                 // Kiểm tra nếu module và course tồn tại
-                if ($module && $module->course) {
-                    $course = $module->course;
+                if ($enrollment && $enrollment->course) {
+                    $course = $enrollment->course;
 
                     // Đếm số video đã xem
                     $watchedVideos = $enrollment->status_docs()->where('status_doc', true)->count();
@@ -535,6 +437,7 @@ class EnrollmentApiController extends Controller
         }
     }
 
+    // lấy ra tên và tiến độ của khóa học mà người dùng đã học (đã sửa)
     public function learingCourse(): JsonResponse
     {
         try {
@@ -543,16 +446,15 @@ class EnrollmentApiController extends Controller
             // Lấy ra tất cả các enrollment cho user_id đã đăng ký enroll = true
             $enrollments = Enrollment::where('user_id', $user_id)
                 ->where('enroll', true)
-                ->with(['module.course.chapters.documents', 'status_docs']) //Quan hệ
+                ->with(['course.chapters.documents', 'status_docs']) //Quan hệ
                 ->get();
 
             // Khởi tạo mảng chứa thông tin khóa học
             $courses = $enrollments->map(function ($enrollment) {
-                $module = $enrollment->module;
 
                 // Kiểm tra nếu module và course tồn tại
-                if ($module && $module->course) {
-                    $course = $module->course;
+                if ($enrollment && $enrollment->course) {
+                    $course = $enrollment->course;
 
                     // Lấy tổng số tài liệu của khóa học qua các chapters
                     $totalDocuments = $course->chapters->flatMap(function ($chapter) {
@@ -592,85 +494,14 @@ class EnrollmentApiController extends Controller
         }
     }
 
-    // Cấp chứng chỉ
-    public function addCertificate(Request $request, $course_id): JsonResponse
-    {
-        try {
-            $user = auth('api')->user();
-
-            // Lấy danh sách module_id từ course_id
-            $module_ids = Module::where('course_id', $course_id)->pluck('id');
-
-            // Kiểm tra xem module_id có tồn tại không
-            if ($module_ids->isEmpty()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Không tìm thấy module cho khóa học này.'
-                ], 404);
-            }
-
-            // Lấy thông tin Enrollment
-            $enrollment = Enrollment::whereIn('module_id', $module_ids)
-                ->where('user_id', $user->id)
-                ->where('status_course', 'completed')
-                ->where('enroll', true)
-                ->where('del_flag', true)
-                ->first();
-
-            // Kiểm tra nếu không tìm thấy Enrollment
-            if (!$enrollment) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Không tìm thấy thông tin đăng ký hoặc khóa học chưa hoàn thành.'
-                ], 404);
-            }
-
-            // Validate url_certificate
-            $validatedData = $request->validate([
-                'url_certificate' => 'required|url',
-            ], [
-                'url_certificate.required' => 'Đường dẫn chứng chỉ là bắt buộc.',
-                'url_certificate.url' => 'Đường dẫn chứng chỉ phải là một URL hợp lệ.',
-            ]);
-
-            // Lưu đường dẫn chứng chỉ vào database
-            $enrollment->certificate_course = $request->url_certificate;
-            $enrollment->save();
-
-            // Trả về kết quả thành công
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Cấp chứng chỉ thành công.',
-                'data' => $enrollment->certificate_course,
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Đã xảy ra lỗi: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    // Đánh giá khóa học
-    // Đánh giá khóa học
+    // Đánh giá khóa học (đã sửa)
     public function addFeedback(Request $request, $course_id): JsonResponse
     {
         try {
             $user = auth('api')->user();
 
-            // Lấy danh sách module_id từ course_id
-            $module_ids = Module::where('course_id', $course_id)->pluck('id');
-
-            // Kiểm tra xem module_id có tồn tại không
-            if ($module_ids->isEmpty()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Không tìm thấy module cho khóa học này.'
-                ], 404);
-            }
-
             // Lấy thông tin Enrollment
-            $enrollment = Enrollment::whereIn('module_id', $module_ids)
+            $enrollment = Enrollment::where('course_id', $course_id)
                 ->where('user_id', $user->id)
                 ->where('status_course', 'completed')
                 ->where('enroll', true)
@@ -707,7 +538,7 @@ class EnrollmentApiController extends Controller
             $enrollment->save();
 
             // Tính trung bình rating_course của các Enrollment cho khóa học này
-            $ratings = Enrollment::whereIn('module_id', $module_ids)
+            $ratings = Enrollment::where('course_id', $course_id)
                 ->whereNotNull('rating_course')
                 ->where('del_flag', true)
                 ->pluck('rating_course');
@@ -743,14 +574,12 @@ class EnrollmentApiController extends Controller
         }
     }
 
-
-
-    // Check người dùng đã đăng ký khóa học hay chưa
+    // Check người dùng đã đăng ký khóa học hay chưa (Không tồn tại api)
     public function checkEnrollmentCourse(Request $request)
     {
         try {
             // Lấy người dùng hiện tại đã đăng nhập
-            $user = auth()->user();
+            $user = auth('api')->user();
 
             // Kiểm tra xem người dùng đã đăng ký khóa học chưa
             $enrollment = Enrollment::where('user_id', $user->id)
@@ -773,49 +602,24 @@ class EnrollmentApiController extends Controller
         }
     }
 
-    // Thay đổi trạng thái khóa học cho học viên
+    // Thay đổi trạng thái khóa học cho học viên (đã sửa)
     public function changeStatusCourseCompleted($course_id)
     {
         try {
             $user = auth('api')->user();
 
-            // Lấy danh sách module_id từ course_id
-            $module_ids = Module::where('course_id', $course_id)->pluck('id');
-
-            // Kiểm tra xem module_id có tồn tại không
-            if ($module_ids->isEmpty()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Không tìm thấy module cho khóa học này.'
-                ], 404);
-            }
-
             // Lấy thông tin Enrollment
-            $enrollments = Enrollment::whereIn('module_id', $module_ids)
+            $updatedRows = Enrollment::where('course_id', $course_id)
                 ->where('user_id', $user->id)
                 ->where('enroll', true)
                 ->where('del_flag', true)
-                ->get();
+                ->update(['status_course' => 'completed']);
 
-
-            if (!$enrollments) {
+            if ($updatedRows === 0) {
                 return response()->json([
                     'status' => 'fail',
                     'message' => 'Không tìm thấy thông tin đăng ký khóa học hoặc khóa học chưa được hoàn thành.',
                 ], 404);
-            }
-
-            if ($enrollments->isEmpty()) {
-                return response()->json([
-                    'status' => 'fail',
-                    'message' => 'Không tìm thấy thông tin đăng ký khóa học.',
-                ], 404);
-            }
-
-            // Lặp qua từng bản ghi và cập nhật trạng thái
-            foreach ($enrollments as $enrollment) {
-                // Cập nhật trạng thái khóa học thành 'completed'
-                $enrollment->update(['status_course' => 'completed']);
             }
 
             return response()->json([
