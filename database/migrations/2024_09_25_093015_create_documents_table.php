@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name_document');
             $table->unsignedTinyInteger('serial_document');
             $table->text('discription_document')->nullable();
+            $table->binary('file')->nullable();
             $table->string('url_video')->nullable();
             $table->enum('type_document', ['video', 'code', 'quiz','summary']);
             $table->ulid('chapter_id');

@@ -18,13 +18,13 @@ return new class extends Migration
             $table->enum('status_course', ['completed', 'in_progress', 'failed'])->default('in_progress');
             $table->text('certificate_course')->nullable();
             $table->boolean('enroll')->default(false)->nullable();
-            $table->ulid('module_id');
+            $table->ulid('course_id');
             $table->ulid('user_id');
             $table->boolean('del_flag');
             $table->timestamps();
-            $table->foreign('module_id')
+            $table->foreign('course_id')
                 ->references('id')
-                ->on('modules')
+                ->on('courses')
                 ->onDelete('restrict');
             $table->foreign('user_id')
                 ->references('id')

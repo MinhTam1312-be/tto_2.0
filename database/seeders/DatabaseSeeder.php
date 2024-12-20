@@ -31,6 +31,5 @@ class DatabaseSeeder extends Seeder
         \App\Models\Post_Category::factory(5)->create();
         \App\Models\Post::factory(5)->create();
         \App\Models\Comment_Post::factory(5)->create();
-        \App\Models\Activity_History::factory(5)->create();
     }
 }

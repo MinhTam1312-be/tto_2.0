@@ -22,12 +22,12 @@ class DocumentFactory extends Factory
         return [
             'id' => (string) Str::ulid(),
             'name_document' => fake()->sentence(5),
-            'discription_document' => fake()->paragraph,
-            // 'poster_document' => fake()->imageUrl(640, 480, 'education'),
-            'url_video' => fake()->url(),
+            'discription_document' => fake()->optional()->paragraph(),
+            'file' => fake()->optional()->text(),
+            'url_video' => fake()->optional()->url(),
             'serial_document' => fake()->numberBetween(1, 100),
-            'type_document' => fake()->randomElement(['video', 'code', 'quiz']),
-            'del_flag' => fake()->randomElement(['true', 'false']),
+            'type_document' => fake()->randomElement(['video', 'code', 'quiz', 'summary']),
+            'del_flag' => fake()->boolean(),
             'chapter_id' => $chapter->id,
         ];
     }

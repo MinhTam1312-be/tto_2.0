@@ -15,19 +15,22 @@ class UserFactory extends Factory
      * @return array<string, mixed>
      */
     public function definition(): array
-    {
-        return [
+{
+    return [
         'id' => (string) Str::ulid(),
         'discription_user' => fake()->text(150),
         'password' => Hash::make('password'),
-        'fullname' => fake()->name,
-        'age' => fake()->numberBetween(18, 60),
-        'email' => fake()->safeEmail,
+        'username' => fake()->userName(),
+        'pin' => fake()->optional()->numberBetween(1000, 9999),
+        'fullname' => fake()->name(),
+        'age' => fake()->optional()->date('Y-m-d', '-18 years'),
+        'email' => fake()->unique()->safeEmail(),
+        'phonenumber' => fake()->unique()->numerify('##########'),
         'avatar' => fake()->imageUrl(200, 200, 'people'),
-        'phonenumber' => fake()->numerify('##########'),
-        'provider_id' => fake()->uuid                   ,
+        'provider_id' => fake()->optional()->uuid(),
         'role' => fake()->randomElement(['client','marketing', 'instructor', 'accountant', 'admin']),
-        'del_flag' => fake()->randomElement(['true', 'false']),
-        ];
-    }
+        'del_flag' => fake()->boolean(),
+    ];
+}
+
 }

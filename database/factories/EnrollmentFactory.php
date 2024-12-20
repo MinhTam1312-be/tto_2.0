@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Course;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\User;
 use App\Models\Module;
@@ -18,19 +19,22 @@ class EnrollmentFactory extends Factory
      */
     public function definition(): array
     {
-        $moduel = Module::factory()->create();
+        $course = Course::factory()->create();
         $user = User::factory()->create();
-
+    
         return [
             'id' => (string) Str::ulid(),
             'rating_course' => fake()->optional()->numberBetween(1, 5),
-            'feedback_text' => fake()->optional()->paragraph,
+            'feedback_text' => fake()->optional()->paragraph(),
             'status_course' => fake()->randomElement(['completed', 'in_progress', 'failed']),
-            'certificate_course' => fake()->optional()->imageUrl(640, 480, 'certificate'),
-            'enroll' => fake()->randomElement(['true', 'false']),
-            'del_flag' => fake()->randomElement(['true', 'false']),
-            'module_id' => $moduel->id,
+            'certificate_course' => fake()->optional()->text(150),
+            'enroll' => fake()->boolean(),
+            'del_flag' => fake()->boolean(),
+            'course_id' => $course->id,
             'user_id' => $user->id,
         ];
     }
+    
+
+    
 }

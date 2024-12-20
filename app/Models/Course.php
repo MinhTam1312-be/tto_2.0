@@ -136,4 +136,9 @@ class Course extends Model
     {
         return $this->hasManyThrough(User::class, Enrollment::class, 'course_id', 'user_id', 'id', 'id');
     }
+    // Quan hệ với Enrollment: Một Course có nhiều Enrollments
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class, 'course_id');
+    }
 }

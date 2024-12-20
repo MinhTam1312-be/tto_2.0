@@ -33,7 +33,7 @@ class Enrollment extends Model
         'certificate_course',
         'enroll',
         'del_flag',
-        'module_id',
+        'course_id',
         'user_id',
     ];
 
@@ -55,14 +55,9 @@ class Enrollment extends Model
     //COURSE
     public function course()
     {
-        return $this->hasOneThrough(Course::class, Module::class, 'module_id', 'course_id', 'id', 'id');
+        return $this->belongsTo(Course::class, 'course_id');
     }
 
-    //MODULE
-    public function module()
-    {
-        return $this->belongsTo(Module::class, 'module_id', 'id');
-    }
 
     //USER
     public function user()

@@ -30,6 +30,7 @@ class Document extends Model
         'name_document',
         'discription_document',
         'serial_document',
+        'file',
         'url_video',
         'type_document',
         'del_flag',

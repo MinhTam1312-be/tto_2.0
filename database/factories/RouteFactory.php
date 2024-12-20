@@ -22,7 +22,6 @@ class RouteFactory extends Factory
             'name_route' => fake()->sentence(3),
             'img_route' => fake()->imageUrl(640, 480, 'education'),
             'discription_route' => fake()->paragraph,
-            'status' => fake()->randomElement(['default', 'customize']),
             'del_flag' => fake()->randomElement(['true', 'false']),
         ];
     }
