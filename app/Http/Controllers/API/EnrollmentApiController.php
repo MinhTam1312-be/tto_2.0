@@ -153,38 +153,21 @@ class EnrollmentApiController extends Controller
             // Xác thực người dùng (middleware auth đảm bảo user luôn tồn tại)
             $user = auth('api')->user();
 
-            // Lấy thông tin khóa học và module liên quan
-            $module = Module::where('course_id', $course_id)
-                ->where('del_flag', true)
-                ->first();
-
-            if (!$module) {
-                return response()->json(['message' => 'Khóa học hoặc module không tồn tại.'], 404);
-            }
-
             // Kiểm tra xem người dùng đã đăng ký khóa học này ở bất kỳ module nào chưa
             $existingEnrollment = Enrollment::where('user_id', $user->id)
-                ->where('module_id', $module->id) // Hoặc kiểm tra theo course_id nếu muốn
+                ->where('course_id', $course_id) // Hoặc kiểm tra theo course_id nếu muốn
                 ->first();
 
             if ($existingEnrollment) {
                 return response()->json(['message' => 'Bạn đã đăng ký khóa học này rồi.'], 400);
             }
-
-            // Tạo bản ghi đăng ký mới trong một transaction
-            DB::transaction(function () use ($user, $module, $course_id) {
-                Enrollment::create([
-                    'user_id' => $user->id,
-                    'module_id' => $module->id,
-                    'status_course' => 'in_progress',
-                    'enroll' => 1,
-                    'del_flag' => true,
-                ]);
-
-                // Gửi thông báo qua event
-                $courseName = Course::find($course_id)->name_course ?? 'Khóa học không xác định';
-                event(new NotificationUserRegisterCourse($user->fullname, $courseName));
-            });
+            Enrollment::create([
+                'user_id' => $user->id,
+                'course_id' => $course_id,
+                'status_course' => 'in_progress',
+                'enroll' => 1,
+                'del_flag' => true,
+            ]);
 
             return response()->json(['message' => 'Đăng ký khóa học thành công.'], 201);
         } catch (\Exception $e) {
@@ -195,7 +178,7 @@ class EnrollmentApiController extends Controller
         }
     }
 
-
+    // Đã sửa xóa module ra và truyền course_id vào Enrollment
     public function checkEnrollment($courseId)
     {
         try {
@@ -205,9 +188,8 @@ class EnrollmentApiController extends Controller
             }
 
             // Lấy danh sách module của khóa học
-            $modules = Module::where('course_id', $courseId)->pluck('id')->toArray();
             $existingEnrollmentflag = Enrollment::where('user_id', $user->id)
-                ->where('module_id', $modules)
+                ->where('course_id', $courseId)
                 ->where('del_flag', false)
                 ->exists();
             if ($existingEnrollmentflag) {
@@ -216,7 +198,7 @@ class EnrollmentApiController extends Controller
             // Kiểm tra xem người dùng đã đăng ký module nào trong khóa học này chưa
             $enrollmentExists = Enrollment::where('user_id', $user->id)
                 ->where('enroll', true)
-                ->whereIn('module_id', $modules)
+                ->whereIn('course_id', $courseId)
                 ->exists();
 
             return response()->json(['is_enrolled' => $enrollmentExists], 200);
@@ -231,6 +213,7 @@ class EnrollmentApiController extends Controller
     }
 
     // Gọi ra các feedback của khóa học
+    // Đã sửa xóa module ra và truyền course_id vào Enrollment
     public function feedbackCourse($course_id, $star, $limit)
     {
         try {
@@ -299,32 +282,27 @@ class EnrollmentApiController extends Controller
 
             $enrollments = Enrollment::where('user_id', $user_id)
                 ->where('enroll', true)
-                ->where('enrollments.del_flag', true)
+                ->where('del_flag', true)
                 ->with([
-                    'module' => function ($query) {
-                        $query->with([
-                            'course' => function ($query) {
-                                $query->where('courses.del_flag', true)->where('courses.status_course', 'success')->with([
-                                    'chapters' => function ($query) {
-                                        $query->with(['documents']); // Không kiểm tra del_flag cho documents
-                                    }
-                                ]);
-                            }
-                        ]);
+                    'course' => function ($query) {
+                        $query->where('del_flag', true)
+                            ->where('status_course', 'success')
+                            ->with([
+                                'chapters' => function ($query) {
+                                    $query->with('documents'); // Không kiểm tra del_flag cho documents
+                                }
+                            ]);
                     },
-                    'status_docs' => function ($query) {
-                        // Không kiểm tra del_flag trong status_docs
-                    }
+                    'status_docs' // Không kiểm tra del_flag trong status_docs
                 ])
                 ->get();
             // dd($enrollments);
             // Khởi tạo mảng chứa thông tin khóa học
             $courses = $enrollments->map(function ($enrollment) {
-                $module = $enrollment->module;
 
                 // Kiểm tra nếu module và course tồn tại
-                if ($module && $module->course) {
-                    $course = $module->course;
+                if ($enrollment && $enrollment->course) {
+                    $course = $enrollment->course;
 
                     // Đếm số video đã xem
                     $watchedVideos = $enrollment->status_docs()->where('status_doc', true)->count();
@@ -742,7 +720,7 @@ class EnrollmentApiController extends Controller
                 // Cập nhật rating_course cho bảng Course
                 $course = Course::find($course_id);
                 if ($course) {
-                    $course->rating_course = round($averageRating,1);
+                    $course->rating_course = round($averageRating, 1);
                     $course->save();
                 }
             }

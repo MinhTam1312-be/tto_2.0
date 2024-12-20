@@ -31,7 +31,6 @@ class Code extends Model
         'answer_code',
         'tutorial_code',
         'del_flag',
-        'document_id',
     ];
 
     //DOCUMENT
