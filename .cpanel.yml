@@ -1,0 +1,5 @@
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/ttosh6754096/public_html/tto
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -r * $DEPLOYPATH
