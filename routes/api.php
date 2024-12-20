@@ -475,7 +475,7 @@ Route::prefix('client')->group(function () {
 
     // MAIN
     // Lấy ra các lộ trình
-    Route::resource('route', RouteApiController::class);
+    Route::resource('route', RouteApiController::class);  
     // Các lộ trình 
     Route::get('route-detail/{route_id}', [RouteApiController::class, 'routeDetail']);
     // Chi tiết lộ trình ra những khóa học
