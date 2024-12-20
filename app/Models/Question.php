@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 
 class Question extends Model
 {
+    protected $primaryKey = 'id'; // id là khóa chính
     // Thiết lập kiểu của khóa chính là chuỗi (string)
     protected $keyType = 'string';
 
@@ -32,12 +33,11 @@ class Question extends Model
         'answer_question',
         'type_question',
         'del_flag',
-        'document_id',
     ];
 
     //DOCUMENT
     public function document()
     {
-        return $this->belongsTo(Document::class);
+        return $this->belongsTo(Document::class, 'id', 'id');
     }
 }

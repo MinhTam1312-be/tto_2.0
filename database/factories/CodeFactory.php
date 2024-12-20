@@ -21,12 +21,11 @@ class CodeFactory extends Factory
         $document = Document::factory()->create();
         
         return [
-            'id' => (string) Str::ulid(),
+            'id' => $document->id,
             'question_code' => fake()->text(100),
             'answer_code' => fake()->text(100),
             'tutorial_code' => fake()->text(200),
             'del_flag' => fake()->randomElement(['true', 'false']),
-            'document_id' => $document->id,
         ];
     }
 }

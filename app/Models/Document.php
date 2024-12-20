@@ -65,13 +65,13 @@ class Document extends Model
     //QUESTION
     public function question()
     {
-        return $this->hasOne(Question::class);
+        return $this->hasOne(Question::class, 'id', 'id');
     }
 
     //CODE
     public function code()
     {
-        return $this->hasOne(Code::class);
+        return $this->hasOne(Question::class, 'id', 'id');
     }
 
 }

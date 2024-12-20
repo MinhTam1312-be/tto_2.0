@@ -15,10 +15,9 @@ return new class extends Migration {
             $table->text('content_question');
             $table->text('answer_question');
             $table->enum('type_question', ['multiple_choice', 'fill', 'true_false']);
-            $table->ulid('document_id')->unique();
             $table->boolean('del_flag');
             $table->timestamps();
-            $table->foreign('document_id')
+            $table->foreign('id')
                 ->references('id')
                 ->on('documents')
                 ->onDelete('restrict');
