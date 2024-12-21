@@ -60,11 +60,10 @@ class CourseApiController extends Controller
             $courses = Course::withCount([
                 'chapters as num_chapter',
                 'documents as num_document'
-            ]) // Đếm số chapters và lessons
-                ->with('chapters.documents') // Lấy các chapters cùng lessons lồng nhau
-                ->where('status_course', 'success')
-                ->where('status_course', 'confirming')
-                ->where('del_flag', true)
+            ]) // Đếm số chapters và documents
+                ->with('chapters.documents') // Lấy các chapters cùng documents lồng nhau
+                ->whereIn('status_course', ['success', 'confirming']) // Kiểm tra nhiều trạng thái
+                ->where('del_flag', true) // Chỉ lấy các khóa học chưa bị xóa
                 ->get();
 
             return response()->json([
@@ -106,12 +105,7 @@ class CourseApiController extends Controller
     {
         try {
             // Tìm khóa học với id và kiểm tra điều kiện del_flag
-            $course = Course::withCount([
-                'chapters as num_chapter',
-                'documents as num_document'
-            ]) // Đếm số chapters và lessons
-                ->with('chapters.documents') // Lấy các chapters cùng lessons lồng nhau
-                ->where('status_course', 'success')
+            $course = Course::where('status_course', 'success')
                 ->where('del_flag', true)
                 ->find($id);
 
@@ -172,11 +166,7 @@ class CourseApiController extends Controller
 
         try {
             // Tạo truy vấn để tìm kiếm khóa học với đếm chapters và documents
-            $query = Course::withCount([
-                'chapters as num_chapter',
-                'documents as num_document'
-            ])
-                ->where('del_flag', true); // Chỉ lấy các khóa học có del_flag là true
+            $query = Course::where('del_flag', true)->whereIn('status_course', ['success', 'confirming']); // Chỉ lấy các khóa học có del_flag là true
 
             // Nếu có tên lộ trình
             if (!empty($routeName)) {
@@ -214,10 +204,7 @@ class CourseApiController extends Controller
         try {
             $query = Course::with([
                 'user:id,fullname,email' // Lấy thông tin avatar từ user
-            ])->withCount(
-                'chapters as num_chapter',
-                'documents as num_document'
-            );
+            ]);
             if ($price == 'pro') {
                 $query->where('price_course', '>', 0);
             } else if ($price == 'free') {
