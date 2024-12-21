@@ -23,7 +23,7 @@ class VNPayApiController extends Controller
         $vnp_HashSecret = env('VNP_HASHSECRET'); // Chuỗi bí mật
 
         $course_id = $request->get('course_id'); // Lấy course_id
-        $course = course::find($course_id);
+        $course = Course::find($course_id);
         $user_id = $request->get('user_id'); // Lấy user_id
 
         $vnp_SecureHash = $request->get('vnp_SecureHash'); // Lấy mã hash từ phản hồi của VNPay
@@ -38,11 +38,10 @@ class VNPayApiController extends Controller
         $secureHash = hash_hmac('sha512', $hashdata, $vnp_HashSecret);
 
         if ($secureHash === $vnp_SecureHash) {
-            $module_id = Module::where('course_id', $course_id)->pluck('id')->first();
             $vnp_Amount100 = $vnp_Amount / 100;
 
             // Kiểm tra Enrollment hiện có
-            $checkEnrollment = Enrollment::where('module_id', $module_id)
+            $checkEnrollment = Enrollment::where('course_id', $course->id)
                 ->where('user_id', $user_id)
                 ->first();
             $user = User::find($user_id);
@@ -52,7 +51,7 @@ class VNPayApiController extends Controller
                         // Nếu chưa có Enrollment, tạo Enrollment mới
                         $checkEnrollment = Enrollment::create([
                             'user_id' => $user_id,
-                            'module_id' => $module_id,
+                            'course_id' => $course->id,
                             'status_course' => 'in_progress',
                             'enroll' => true,
                             'del_flag' => true,
@@ -109,7 +108,7 @@ class VNPayApiController extends Controller
             if (!$checkEnrollment) {
                 $checkEnrollment = Enrollment::create([
                     'user_id' => $user_id,
-                    'module_id' => $module_id,
+                    'course_id' => $course->id,
                     'status_course' => 'in_progress',
                     'enroll' => true,
                     'del_flag' => true,
@@ -165,13 +164,8 @@ class VNPayApiController extends Controller
     }
     public function getVNPay(Request $request, $course_id, $course_price)
     {
-        // $user_id = "01JF297KXNH8EKS9KYN85CJKNP";
-        $user_id = auth('api')->user()->id;
-        $moduleId = Module::where('course_id', $course_id)->pluck('id')->first();
-        $module = Module::find($moduleId);
-        if (!$module) {
-            return response()->json(['message' => 'Module không tồn tại.'], 404);
-        }
+        $user_id = "01JFJAD8RQZ6KAEPP7JWP63Z44";
+        // $user_id = auth('api')->user()->id;
         $vnp_Returnurll = route('vnpay.return', ['course_id' => $course_id, 'user_id' => $user_id]);
         $vnp_Url = env('VNP_URL');
         $vnp_Returnurl = "https://www.tto.sh/home";
@@ -380,7 +374,7 @@ class VNPayApiController extends Controller
     public function getMomo(Request $request, $course_id, $course_price)
     {
         // $user_id = auth('api')->user()->id;
-        $user_id = "01JEWFY0PFH1J33R7473CGHWVK";
+        $user_id = "01JFJAD8RQZ6KAEPP7JWP63Z44";
         if (!$user_id) {
             return response()->json(['message' => 'Người dùng chưa đăng nhập.'], 401);
         }

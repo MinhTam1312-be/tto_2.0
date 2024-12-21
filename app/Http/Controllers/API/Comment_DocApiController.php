@@ -344,7 +344,7 @@ class Comment_DocApiController extends Controller
 
     }
 
-    // Lấy ra các bình luận thuộc khóa học
+    // Lấy ra các bình luận thuộc khóa học (đã sửa)
     public function geTotalCommentDoc($course_id)
     {
         try {
@@ -360,7 +360,7 @@ class Comment_DocApiController extends Controller
             }
 
             // Kiểm tra quyền truy cập khóa học dựa trên Enrollment và cờ del_flag
-            $course = Course::whereHas('modules.enrollments', function ($query) use ($user_id) {
+            $course = Course::whereHas('enrollments', function ($query) use ($user_id) {
                 $query->where('user_id', $user_id)
                     ->where('enroll', true)
                     ->where('del_flag', true);
