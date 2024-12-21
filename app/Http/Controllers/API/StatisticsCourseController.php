@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\DB;
 
 class StatisticsCourseController extends Controller
 {
+
+    // INSTRUCTOR
+    // Gộp 4 cái tổng khóa học, tổng doanh thu, đánh giá giảng viên, tổng lượt xem (Đã sửa)
     public function getStatisticalCourse()
     {
         try {
@@ -25,14 +28,10 @@ class StatisticsCourseController extends Controller
             $totalCourse = Course::where('user_id', $user_id)->count();
 
             // Lấy ra tất cả các modules của giảng viên
-            $modules = Module::whereIn('course_id', function ($query) use ($user_id) {
-                $query->select('id')
-                    ->from('courses')
-                    ->where('user_id', $user_id);
-            })->get();
+            $coursesInstructor = Course::where('user_id', $user_id)->get();
 
             // Lấy ra tất cả các enrollments liên quan đến modules của giảng viên
-            $enrollments = Enrollment::whereIn('module_id', $modules->pluck('id'))->get();
+            $enrollments = Enrollment::whereIn('course_id', $coursesInstructor->pluck('id'))->get();
 
             // Lấy ra tất cả các transactions liên quan đến enrollments
             $transactions = Transaction::whereIn('enrollment_id', $enrollments->pluck('id'))->get();
@@ -229,21 +228,21 @@ class StatisticsCourseController extends Controller
 
 
     // Admin
-    // Thống kê người hoàn thành khóa học, người chưa hoàn thành khóa học
+    // Thống kê người hoàn thành khóa học, người chưa hoàn thành khóa học (Đã sửa)
     public function statisticalProgressClient()
     {
         try {
             $user_id = auth('api')->user()->id;
 
             // Đếm số lượng enrollment có status_course là 'in_progress'
-            $inProgressCount = Enrollment::whereHas('module.course', function ($query) use ($user_id) {
+            $inProgressCount = Enrollment::whereHas('course', function ($query) use ($user_id) {
                 $query->where('user_id', $user_id);
             })->where('status_course', 'in_progress')
                 ->where('enroll', true)
                 ->count();
 
             // Đếm số lượng enrollment có status_course là 'completed'
-            $completedCount = Enrollment::whereHas('module.course', function ($query) use ($user_id) {
+            $completedCount = Enrollment::whereHas('course', function ($query) use ($user_id) {
                 $query->where('user_id', $user_id);
             })->where('status_course', 'completed')
                 ->where('enroll', true)
@@ -253,7 +252,7 @@ class StatisticsCourseController extends Controller
             $totalCourse = Course::where('user_id', $user_id)->count();
 
             // Đếm ra tổng người dùng đăng ký khóa học của giảng viên
-            $completedCount = Enrollment::whereHas('module.course', function ($query) use ($user_id) {
+            $completedCount = Enrollment::whereHas('course', function ($query) use ($user_id) {
                 $query->where('user_id', $user_id);
             })->where('enroll', true)
                 ->count();
