@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\AdminCourseResource;
@@ -8,16 +8,15 @@ use App\Models\Chapter;
 use App\Models\Course;
 use App\Models\Document;
 use App\Models\Module;
-use App\Models\User;
+use App\Models\Route;
 use App\Services\LogActivityService;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use App\Models\Route;
-use Illuminate\Support\Str;
+use Str;
 
-class AdminCourseApiController extends Controller
+class CoursesInstructorApiController extends Controller
 {
+    // CÁC CHỨC NĂNG QUẢN LÝ KHÓA HỌC CỦA INSTRUCTOR
     /**
      * Display a listing of the resource.
      */
@@ -25,9 +24,9 @@ class AdminCourseApiController extends Controller
     {
         try {
             $user = auth('api')->user();
-            if($user->role == 'admin') {
+            if ($user->role == 'admin') {
                 $courses = Course::with('user')->get();
-            }else{
+            } else {
                 $courses = Course::with('user')->where('user_id', $user->id)->get();
             }
 
@@ -153,7 +152,6 @@ class AdminCourseApiController extends Controller
             ], 500);
         }
     }
-
 
     /**
      * Display the specified resource.
@@ -284,115 +282,12 @@ class AdminCourseApiController extends Controller
         }
     }
 
-
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)
     {
         //
-    }
-
-    // Lấy ra các khóa học thuộc lộ trình, không check del_flag
-    public function getCoursesByRoute($route_id)
-    {
-        // Tìm route dựa trên route_id
-        $route = Route::find($route_id);
-
-        if (!$route) {
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Không tìm thấy route với ID đã cho.',
-                'data' => null,
-            ], 404);
-        }
-
-        // Lấy tất cả các khóa học liên quan đến route thông qua các module
-        $courses = $route->modules()
-            ->with('course')
-            ->get()
-            ->pluck('course')
-            ->flatten();
-
-        if ($courses->isEmpty()) {
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Không có khóa học nào thuộc route này.',
-                'data' => null,
-            ], 404);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $courses,
-        ], 200);
-    }
-
-    // Kiểm duyệt khóa học
-    public function censorCourse(Request $request, $course_id)
-    {
-        try {
-            $user = auth('api')->user();
-
-            // Tìm khóa học
-            $course = Course::find($course_id);
-            if (!$course) {
-                return response()->json([
-                    'status' => 'fail',
-                    'message' => 'Khóa học không tồn tại.',
-                    'data' => null,
-                ], 404);
-            }
-
-            // Xác thực dữ liệu
-            $validatedData = $request->validate([
-                'status_course' => 'required|string|in:confirming,success,failed'
-            ], [
-                'status_course.required' => 'Trạng thái khóa học là bắt buộc.',
-                'status_course.string' => 'Trạng thái khóa học phải là một chuỗi.',
-                'status_course.in' => 'Trạng thái khóa học không hợp lệ.'
-            ]);
-
-            // Trước khi lưu, ghi log thay đổi trạng thái khóa học
-            $oldStatus = $course->status_course; // Lấy trạng thái cũ của khóa học
-            $newStatus = $validatedData['status_course']; // Trạng thái mới từ dữ liệu xác thực
-
-            // Cập nhật trạng thái khóa học
-            $course->fill($validatedData);
-            $course->save();
-
-            // Ghi log thay đổi trạng thái
-            LogActivityService::log(
-                'cap_nhat_trang_thai_khoa_hoc',
-                "Đã thay đổi trạng thái khóa học '{$course->name_course}' từ '$oldStatus' sang '$newStatus'.",
-                'success'
-            );
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Khóa học đã được cập nhật trạng thái',
-                'data' => new AdminCourseResource($course),
-            ], 200);
-        } catch (\Illuminate\Validation\ValidationException $validatedData) {
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Lỗi xác thực dữ liệu',
-                'errors' => $validatedData->errors(),
-            ], 422);
-        } catch (\Exception $e) {
-            // Ghi log thất bại khi có lỗi trong quá trình xử lý
-            LogActivityService::log(
-                'cap_nhat_trang_thai_khoa_hoc',
-                "Cập nhật trạng thái khóa học thất bại: " . $e->getMessage(),
-                'fail'
-            );
-
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Đã xảy ra lỗi: ' . $e->getMessage(),
-                'data' => null,
-            ], 500);
-        }
     }
 
     // Trạng thái khóa học (ẩn, hiện)
@@ -437,56 +332,6 @@ class AdminCourseApiController extends Controller
             return response()->json([
                 'status' => 'fail',
                 'message' => 'Đã xảy ra lỗi khi thay đổi trạng thái khóa học',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-
-    // Gọi ra các khóa học được lọc theo trạng thái, view, giảm giá
-    public function filterCourse(Request $request)
-    {
-        try {
-            // Xác thực dữ liệu đầu vào
-            $validatedData = $request->validate([
-                'del_flag' => 'boolean', // true hoặc false để lọc bài viết
-                'views_course' => 'in:asc,desc', // chỉ chấp nhận 'asc' hoặc 'desc'
-                'discount_price_course' => 'in:asc,desc' // chỉ chấp nhận số từ 0 đến 100 và 'asc' hoặc 'desc'
-            ], [
-                'del_flag.required' => 'Trạng thái là bắt buộc.',
-                'del_flag.boolean' => 'Trạng thái chỉ chấp nhận true hoặc false.',
-                'view.in' => 'Thứ tự sắp xếp phải là asc hoặc desc.',
-                'discount_price_course.in' => 'Thứ tự giảm giá sắp xếp phải là asc hoặc desc.',
-            ]);
-
-            // Lấy tham số từ request
-            $del_flag = $validatedData['del_flag'] ?? true;
-            $sortview = $validatedData['views_course'] ?? 'desc'; // Mặc định là 'desc' nếu không được truyền vào
-            $sortviewdiscount_price_course = $validatedData['discount_price_course'] ?? 'desc'; // Mặc định là 'desc' nếu không được truyền vào
-
-            // Query lọc và sắp xếp
-            $courses = Course::where('del_flag', $del_flag)
-                ->orderBy('views_course', $sortview)
-                ->orderBy('discount_price_course', $sortviewdiscount_price_course)
-                ->get();
-
-            // Trả về kết quả nếu thành công
-            return response()->json([
-                'status' => 'success',
-                'data' => $courses,
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Bắt lỗi xác thực
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Dữ liệu đầu vào không hợp lệ.',
-                'errors' => $e->errors(),
-            ], 422);
-        } catch (\Exception $e) {
-            // Bắt các lỗi khác
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu.',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -592,135 +437,6 @@ class AdminCourseApiController extends Controller
             return response()->json([
                 'error' => 'Đã xảy ra lỗi trong quá trình tìm kiếm: ' . $e->getMessage()
             ], 500); // 500 Internal Server Error
-        }
-    }
-
-    public function uploadImage($file)
-    {
-        // Upload file lên Cloudinary và trả về URL bảo mật
-        $uploadedFileUrl = Cloudinary::upload($file->getRealPath(), [
-            'folder' => 'courses' // Tên thư mục trên Cloudinary
-        ])->getSecurePath();
-
-        return $uploadedFileUrl;
-    }
-
-    private function processUploadedImage(Request $request)
-    {
-        // Kiểm tra xem có file ảnh trong yêu cầu không
-        $imgFile = $request->file('img_course');
-
-        if ($imgFile) {
-            // Kiểm tra nếu có nhiều hơn 1 file ảnh
-            if (is_array($imgFile) || $request->hasFile('img_course.1')) {
-                throw new \Exception('Chỉ được phép tải lên tối đa 1 ảnh.');
-            }
-
-            // Upload ảnh và trả về URL
-            return $this->uploadImage($imgFile);
-        }
-
-        return null;
-    }
-
-    // Chức năng thay đổi ảnh cho khóa học
-    public function updateImagesCourse(Request $request, $course_id)
-    {
-        try {
-            // Tìm khóa học theo ID
-            $course = Course::findOrFail($course_id);
-
-            // Xác thực dữ liệu đầu vào
-            $validatedData = $request->validate([
-                'img_course' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
-            ], [
-                'img_course.required' => 'Vui lòng chọn ảnh.',
-                'img_course.image' => 'Tệp phải là một hình ảnh.',
-                'img_course.mimes' => 'Chỉ hỗ trợ định dạng: jpeg, png, jpg, gif.',
-                'img_course.max' => 'Dung lượng tối đa của hình ảnh là 2MB.',
-            ]);
-
-            // Upload ảnh mới lên Cloudinary
-            $uploadedFileUrl = Cloudinary::upload($request->file('img_course')->getRealPath(), [
-                'folder' => 'courses',
-                'public_id' => pathinfo($request->file('img_course')->getClientOriginalName(), PATHINFO_FILENAME)
-            ])->getSecurePath();
-
-            // Cập nhật ảnh mới cho khóa học
-            $course->update(['img_course' => $uploadedFileUrl]);
-
-            // Ghi log thành công
-            LogActivityService::log(
-                'cap_nhat_hinh_anh_khoa_hoc',
-                "Đã cập nhật hình ảnh cho khóa học '{$course->name_course}'.",
-                'success'
-            );
-
-            return response()->json([
-                'status' => 'success',
-                'message' => "Hình ảnh khóa học '{$course->name_course}' đã được cập nhật thành công.",
-                'data' => new AdminCourseResource($course),
-            ], 200);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Không tìm thấy khóa học.',
-            ], 404);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Ghi log khi xác thực thất bại
-            LogActivityService::log(
-                'cap_nhat_hinh_anh_khoa_hoc',
-                "Lỗi xác thực khi cập nhật hình ảnh: " . json_encode($e->errors(), JSON_UNESCAPED_UNICODE),
-                'fail'
-            );
-
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Dữ liệu đầu vào không hợp lệ.',
-                'errors' => $e->errors(),
-            ], 422);
-        } catch (\Exception $e) {
-            // Ghi log khi có lỗi hệ thống
-            LogActivityService::log(
-                'cap_nhat_hinh_anh_khoa_hoc',
-                "Đã xảy ra lỗi khi cập nhật hình ảnh cho khóa học: " . $e->getMessage(),
-                'fail'
-            );
-
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Đã xảy ra lỗi trong quá trình cập nhật hình ảnh.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-
-    //Sắp xếp khóa học theo nhiều người đăng ký nhất
-    public function filterCourseByEnroll(Request $request)
-    {
-        try {
-            // Lấy khóa học cùng số lượng người học (enroll)
-            $courses = Course::withCount([
-                'modules.enrollments as total_enrolls' => function ($query) {
-                    $query->where('enroll', true)
-                        ->where('del_flag', true);
-                }
-            ])
-                ->orderByDesc('total_enrolls') // Sắp xếp giảm dần
-                ->get();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Lấy danh sách khóa học thành công.',
-                'data' => $courses,
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Đã xảy ra lỗi: ' . $e->getMessage(),
-            ], 500);
         }
     }
 }

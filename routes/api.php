@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Accountant\StatisticsAccountantApiController;
 use App\Http\Controllers\Admin\ActivitiesLogController;
 use App\Http\Controllers\Admin\AdminActivitiesHistory;
 use App\Http\Controllers\Admin\AdminAnswer_CodeApiController;
@@ -51,6 +52,16 @@ use App\Http\Controllers\API\SocialApiController;
 use App\Http\Controllers\API\StatisticsCourseController;
 use App\Http\Controllers\API\StatisticsPostController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\Instructor\ChaptersInstructorApiController;
+use App\Http\Controllers\Instructor\CommentsInstructorApiController;
+use App\Http\Controllers\Instructor\CoursesInstructorApiController;
+use App\Http\Controllers\Instructor\DocumentsInstructorApiController;
+use App\Http\Controllers\Instructor\RoutesInstructorApiController;
+use App\Http\Controllers\Instructor\StatisticsInstructorApiController;
+use App\Http\Controllers\Marketing\CategoriesMarketingApiController;
+use App\Http\Controllers\Marketing\CommentsMarketingApiController;
+use App\Http\Controllers\Marketing\PostsMarketingApiController;
+use App\Http\Controllers\Marketing\StatisticsMarketingApiController;
 use App\Models\Enrollment;
 use GuzzleHttp\Middleware;
 use Illuminate\Http\Request;
@@ -71,16 +82,18 @@ use Illuminate\Support\Facades\Route;
 //INSTRUCTOR
 Route::prefix('instructor')->group(function () {
     Route::middleware(['auth.api'])->group(function () {
+
+        // THỐNG KÊ INSTRUCTOR 
         // Gộp 4 cái tổng khóa học, tổng doanh thu, đánh giá giảng viên, tổng lượt xem
-        Route::get('statistical-course', [StatisticsCourseController::class, 'getStatisticalCourse']);
-        // THỐNG KÊ
+        Route::get('statistical-course', [StatisticsInstructorApiController::class, 'getStatisticalCourse']);
         // Thống kê tổng số khóa học của giảng viên, doanh thu tổng của giảng viên dựa trên người mua khóa học sau thuế.
-        Route::get('statistical-course-management', [StatisticsCourseController::class, 'getStatistical']);
-        Route::get('statistical-course-column-chart', [StatisticsCourseController::class, 'statisticalColumnChart']);
+        Route::get('statistical-course-management', [StatisticsInstructorApiController::class, 'getStatistical']);
+        // Doanh thu của giảng viên theo 12 tháng trong năm
+        Route::get('statistical-course-column-chart', [StatisticsInstructorApiController::class, 'statisticalColumnChart']);
         // Tổng học viên chưa hoàn thành, và đã hoàn thành, tổng khóa học, tổng người đăng ký của giảng viên 
-        Route::get('statistical-complete-course', [StatisticsCourseController::class, 'statisticalProgressClient']);
-        Route::get('statistical-highest-rating-course', [StatisticsCourseController::class, 'statisticalHighestRatingCourse']);
-        Route::get('statistical-course-column-chart', [StatisticsCourseController::class, 'statisticalColumnChart']);
+        Route::get('statistical-complete-course', [StatisticsInstructorApiController::class, 'statisticalProgressClient']);
+        // Khóa học có tổng đánh giá cao nhất
+        Route::get('statistical-highest-rating-course', [StatisticsInstructorApiController::class, 'statisticalHighestRatingCourse']);
 
 
 
@@ -88,64 +101,64 @@ Route::prefix('instructor')->group(function () {
 
         // QUẢN LÝ KHÓA HỌC
         // Chức năng gọi, thêm, sửa khóa học
-        Route::resource('courses', AdminCourseApiController::class);
+        Route::resource('courses', CoursesInstructorApiController::class);
         // Ẩn, hiện khóa học
-        Route::get('status-course/{course_id}', [AdminCourseApiController::class, 'statusCourse']);
+        Route::get('status-course/{course_id}', [CoursesInstructorApiController::class, 'statusCourse']);
         // Lấy ra các bài học từ course
-        Route::get('doc-course/{course_id}', [AdminCourseApiController::class, 'docForUser']);
+        Route::get('doc-course/{course_id}', [CoursesInstructorApiController::class, 'docForUser']);
         // Tìm kiếm khóa học
-        Route::post('search-course', [AdminCourseApiController::class, 'searchNameCourse']);
+        Route::post('search-course', [CoursesInstructorApiController::class, 'searchNameCourse']);
+
+        // QUẢN LÝ LỘ TRÌNH
         // Lấy ra các lộ trình
-        Route::resource('route', RouteApiController::class);
+        Route::resource('route', RoutesInstructorApiController::class);
 
 
         // QUẢN LÝ CHƯƠNG
         // Chức năng gọi, thêm, sửa chương
-        Route::resource('chapters', AdminChapterApiController::class);
+        Route::resource('chapters', ChaptersInstructorApiController::class);
         // Gọi các chương thuộc khóa học
-        Route::get('chapters-by-course/{course_id}', [AdminChapterApiController::class, 'getChaptersByCourse']);
+        Route::get('chapters-by-course/{course_id}', [ChaptersInstructorApiController::class, 'getChaptersByCourse']);
         // Ẩn, hiện bình luận bài học
-        Route::get('status-chapter/{chapter_id}', [AdminChapterApiController::class, 'statusChapter']);
+        Route::get('status-chapter/{chapter_id}', [ChaptersInstructorApiController::class, 'statusChapter']);
         // Lấy id khóa học đếm chapter đếm chi tiết chapter trong doc
-        Route::get('getCountChapterAndDoc/{course_id}', [AdminChapterApiController::class, 'getCountChapterAndDoc']);
+        Route::get('getCountChapterAndDoc/{course_id}', [ChaptersInstructorApiController::class, 'getCountChapterAndDoc']);
 
 
         // QUẢN LÝ DOCUMENTS
         // Chức năng gọi bài học
-        Route::resource('documents', AdminDocumentApiController::class);
+        Route::resource('documents', DocumentsInstructorApiController::class);
         // Gọi các bài học thuộc chương
-        Route::get('documents-by-chapter/{chapter_id}', [AdminDocumentApiController::class, 'getDocumentsByChapter']);
-        // Gọi các bài học thuộc chương
-        Route::get('documents-by-course-chapter/{course_id}/{chapter_id}', [AdminDocumentApiController::class, 'getDocumentsByCourseChapter']);
+        Route::get('documents-by-chapter/{chapter_id}', [DocumentsInstructorApiController::class, 'getDocumentsByChapter']);
+        // Gọi các bài học thuộc chương, thuộc khóa học
+        Route::get('documents-by-course-chapter/{course_id}/{chapter_id}', [DocumentsInstructorApiController::class, 'getDocumentsByCourseChapter']);
         // Chức năng thêm document theo dạng video
-        Route::post('store-video-document', [AdminDocumentApiController::class, 'storeVideoDocument']);
+        Route::post('store-video-document', [DocumentsInstructorApiController::class, 'storeVideoDocument']);
         // Chức năng thêm document theo dạng quiz
-        Route::post('store-quiz-document', [AdminDocumentApiController::class, 'storeQuizDocument']);
+        Route::post('store-quiz-document', [DocumentsInstructorApiController::class, 'storeQuizDocument']);
         // Chức năng thêm document theo dạng code
-        Route::post('store-code-document', [AdminDocumentApiController::class, 'storeCodeDocument']);
+        Route::post('store-code-document', [DocumentsInstructorApiController::class, 'storeCodeDocument']);
         // Chức năng sửa document theo dạng video
-        Route::put('update-video-document/{doc_id}', [AdminDocumentApiController::class, 'updateVideoDocument']);
+        Route::put('update-video-document/{doc_id}', [DocumentsInstructorApiController::class, 'updateVideoDocument']);
         // Chức năng sửa document theo dạng quiz
-        Route::put('update-quiz-document/{doc_id}', [AdminDocumentApiController::class, 'updateQuizDocument']);
+        Route::put('update-quiz-document/{doc_id}', [DocumentsInstructorApiController::class, 'updateQuizDocument']);
         // Chức năng sửa document theo dạng code
-        Route::put('update-code-document/{doc_id}', [AdminDocumentApiController::class, 'updateCodeDocument']);
+        Route::put('update-code-document/{doc_id}', [DocumentsInstructorApiController::class, 'updateCodeDocument']);
         // Chức năng ẩn, hiện bài học
-        Route::get('status-document/{doc_id}', [AdminDocumentApiController::class, 'statusDocument']);
+        Route::get('status-document/{doc_id}', [DocumentsInstructorApiController::class, 'statusDocument']);
 
 
         // QUẢN LÝ BÌNH LUẬN KHÓA HỌC
         // Lấy ra tất cả bình luận
-        Route::resource('get-all-comment-doc', AdminComment_DocumentApiController::class);
+        Route::resource('get-all-comment-doc', CommentsInstructorApiController::class);
         // Lấy ra các bình luận của document
-        Route::get('get-comment-doc/{doc_id}', [AdminComment_DocumentApiController::class, 'getCommentDoc']);
+        Route::get('get-comment-doc/{doc_id}', [CommentsInstructorApiController::class, 'getCommentDoc']);
         // Chức năng bình luận
-        Route::post('comment-doc/{doc_id}/{comment_id?}', [AdminComment_DocumentApiController::class, 'commentDoc']);
+        Route::post('comment-doc/{doc_id}/{comment_id?}', [CommentsInstructorApiController::class, 'commentDoc']);
         // Sửa bình luận của mình.
-        Route::match(['put', 'patch'], 'comment-update/{doc_id}/{comment_id}', [AdminComment_DocumentApiController::class, 'updateCommentDoc']);
-        // Xóa bình luận của mình.
-        Route::delete('comment-delete/{doc_id}/{comment_id}', [AdminComment_DocumentApiController::class, 'deleteCommentDoc']);
+        Route::match(['put', 'patch'], 'comment-update/{doc_id}/{comment_id}', [CommentsInstructorApiController::class, 'updateCommentDoc']);
         // Ẩn, hiện bình luận bài học
-        Route::get('status-comment-doc/{doc_id}/{comment_id}', [AdminComment_DocumentApiController::class, 'statusCommentDoc']);
+        Route::get('status-comment-doc/{doc_id}/{comment_id}', [CommentsInstructorApiController::class, 'statusCommentDoc']);
     });
 });
 
@@ -155,84 +168,89 @@ Route::prefix('accountant')->group(function () {
 
         // THỐNG KÊ
         // Thống kê tổng người dùng
-        Route::get('statistical-user', [StatisticsAccountantController::class, 'statisticalUser']);
+        Route::get('statistical-user', [StatisticsAccountantApiController::class, 'statisticalUser']);
         // Thống kê tổng đơn hàng
-        Route::get('statistical-enrollment', [StatisticsAccountantController::class, 'statisticalEnrollment']);
+        Route::get('statistical-enrollment', [StatisticsAccountantApiController::class, 'statisticalEnrollment']);
         // Thống kê tổng lợi nhuận (sau thuế)
-        Route::get('statistical-profits', [StatisticsAccountantController::class, 'statisticalProfits']);
+        Route::get('statistical-profits', [StatisticsAccountantApiController::class, 'statisticalProfits']);
         // Thống kê tổng đơn hàng hôm nay
-        Route::get('statistical-enrollment-today', [StatisticsAccountantController::class, 'statisticalEnrollmentToday']);
+        Route::get('statistical-enrollment-today', [StatisticsAccountantApiController::class, 'statisticalEnrollmentToday']);
         // Lấy ra các thống kê statistical-user, statistical-enrollment, statistical-profits, statistical-enrollment-today
-        Route::get('get-all-statistical-UEPET', [StatisticsAccountantController::class, 'getStatistics']);
+        Route::get('get-all-statistical-UEPET', [StatisticsAccountantApiController::class, 'getStatistics']);
         // Thống kê các tháng theo năm
-        Route::get('statistical-profits-by-months/{year?}', [StatisticsAccountantController::class, 'statisticalProfitsByMonth']);
+        Route::get('statistical-profits-by-months/{year?}', [StatisticsAccountantApiController::class, 'statisticalProfitsByMonth']);
         // Lấy thống kê truyền vào tuần trả về thứ 2 tới chủ nhật
-        Route::get('weekly-statistics/{year}/{week}', [StatisticsAccountantController::class, 'getWeeklyStatistics']);
+        Route::get('weekly-statistics/{year}/{week}', [StatisticsAccountantApiController::class, 'getWeeklyStatistics']);
         // Lấy thống kê theo yêu cầu
-        Route::get('transtion-statistics-request/{filterBy}/{status}/{order}', [StatisticsAccountantController::class, 'getTranstionStatisticsRequest']);
+        Route::get('transtion-statistics-request/{filterBy}/{status}/{order}', [StatisticsAccountantApiController::class, 'getTranstionStatisticsRequest']);
         // Lấy chi tiết transtion ra các khóa học và thông tin user
-        Route::get('get-detail-transtion/{transtion_id}', [StatisticsAccountantController::class, 'getDetailTranstion']);
+        Route::get('get-detail-transtion/{transtion_id}', [StatisticsAccountantApiController::class, 'getDetailTranstion']);
         // Lấy chi tiết khóa học ra các trastion
-        Route::get('/courses-by-transactions/{slug_course}/{filterBy}/{status}/{order}', [StatisticsAccountantController::class, 'getTransactionsByCourse']);
+        Route::get('/courses-by-transactions/{slug_course}/{filterBy}/{status}/{order}', [StatisticsAccountantApiController::class, 'getTransactionsByCourse']);
         // Lấy ra người dùng có bao nhiêu thanh đơn thanh toán
-        Route::get('user-by-transtion/{phone_or_email}', [StatisticsAccountantController::class, 'userByTranstion']);
-
+        Route::get('user-by-transtion/{phone_or_email}', [StatisticsAccountantApiController::class, 'userByTranstion']);
         // Lấy ra tất cả khóa học theo kèm doanh thu bán được của khóa học đó
-        Route::get('course-enrollment-revenue', [StatisticsAccountantController::class, 'courseEnrollmentRevenue']);
-        // Lấy ra tất cả khóa học theo kèm doanh thu bán được của khóa học đó
-        Route::get('course-enrollment-revenue/{slug_course}', [StatisticsAccountantController::class, 'courseEnrollmentRevenueBySlug']);
+        Route::get('course-enrollment-revenue', [StatisticsAccountantApiController::class, 'courseEnrollmentRevenue']);
+        // Lấy ra tất cả khóa học theo kèm doanh thu bán được của khóa học đó theo slug_course 
+        Route::get('course-enrollment-revenue/{slug_course}', [StatisticsAccountantApiController::class, 'courseEnrollmentRevenueBySlug']);
         // Lấy ra khóa học yêu thích nhất
-        Route::get('most-favorite-course/{limit?}', [StatisticsAccountantController::class, 'mostFavoritesByCourse']);
+        Route::get('most-favorite-course/{limit?}', [StatisticsAccountantApiController::class, 'mostFavoritesByCourse']);
         // lấy ra khóa học có đánh giá 5 sao yêu thích nhất 
-        Route::get('most-rated-five-star-course/{limit?}', [StatisticsAccountantController::class, 'mostRaterFiveStarCourse']);
+        Route::get('most-rated-five-star-course/{limit?}', [StatisticsAccountantApiController::class, 'mostRaterFiveStarCourse']);
         // Khóa học có doanh thu cao nhất
-        Route::get('highest-revenue-course', [StatisticsAccountantController::class, 'HighRevenueCourse']);
+        Route::get('highest-revenue-course', [StatisticsAccountantApiController::class, 'HighRevenueCourse']);
         // Khóa học có doanh thu thấp nhất
-        Route::get('lowest-revenue-course', [StatisticsAccountantController::class, 'LowRevenueCourse']);
+        Route::get('lowest-revenue-course', [StatisticsAccountantApiController::class, 'LowRevenueCourse']);
         // gộp 4 api most-favorite-course, most-rated-five-star-course, highest-revenue-course, lowest-revenue-course
-        Route::get('getaccountantStatistics', [StatisticsAccountantController::class, 'getAllStatistics']);
+        Route::get('getaccountantStatistics', [StatisticsAccountantApiController::class, 'getAllStatistics']);
         // Thống kê doanh thu
-        Route::post('total-revenue-by-date', [StatisticsAccountantController::class, 'totalRevenueByDate']);
+        Route::post('total-revenue-by-date', [StatisticsAccountantApiController::class, 'totalRevenueByDate']);
     });
 });
 
 //MARKETING
 Route::prefix('marketing')->group(function () {
     Route::middleware(['auth.api'])->group(function () {
+
         // API GỘP THEO TRANG
         // Route configuration
-        Route::get('statistics-posts/{limit?}', [AdminPostApiController::class, 'statisticsPosts']);
-        // lấy tổng bài viết danh mục bình luận, lượt xem của quyền makerting
-        Route::get('total-post-category-comment-view', [AdminPost_CategoryApiController::class, 'totalPostCategoryView']);
+        Route::get('statistics-posts/{limit?}', [StatisticsMarketingApiController::class, 'statisticsPosts']);
+        // Lấy tổng bài viết danh mục bình luận, lượt xem của quyền makerting
+        Route::get('total-post-category-comment-view', [StatisticsMarketingApiController::class, 'totalPostCategoryView']);
 
 
 
         // THỐNG KÊ
-        // Thống kê của marketing
-        Route::get('statistical-course-management', [StatisticsCourseController::class, 'getTotalCourseApprovedUnapprovedLecturer']);
         // Thống kê bài viết có nhiều bình luận lấy ra bài viết
-        Route::get('statistics-post-many-comments-view/{limit?}', [AdminPostApiController::class, 'statisticsPostManyComments']);
-        // Thống kê bài viết có nhiều bình luận lấy ra bài viết
-        Route::get('statistics-post-little-comments-view/{limit?}', [AdminPostApiController::class, 'statisticsPostLittleComments']);
-        // Thống kê bài viết có nhiều bình luận lấy ra bài viết
-        Route::get('statistics-post-new/{limit?}', [AdminPostApiController::class, 'statisticsPostNew']);
-        // Ẩn, hiện danh mục bài viết
-        Route::get('status-category-post/{category_id}', [AdminPost_CategoryApiController::class, 'statusCategoryPost']);
-        // Chức năng gọi, thêm, sửa danh mục bài viết
-        // Route::resource('post_categories', AdminPost_CategoryApiController::class);
+        Route::get('statistics-post-many-comments-view/{limit?}', [StatisticsMarketingApiController::class, 'statisticsPostManyComments']);
+        // Thống kê bài viết có ít bình luận lấy ra bài viết
+        Route::get('statistics-post-little-comments-view/{limit?}', [StatisticsMarketingApiController::class, 'statisticsPostLittleComments']);
+        // Thống kê bài viết mới nhất
+        Route::get('statistics-post-new/{limit?}', [StatisticsMarketingApiController::class, 'statisticsPostNew']);
 
+        // QUẢN LÝ DANH MỤC BÀI VIẾT
+        // Chức năng gọi, thêm, sửa danh mục bài viết
+        Route::resource('post_categories', CategoriesMarketingApiController::class);
+        // Ẩn, hiện danh mục bài viết
+        Route::get('status-category-post/{category_id}', [CategoriesMarketingApiController::class, 'statusCategoryPost']);
+
+        // QUẢN LÝ BÀI VIẾT 
         // Chức năng gọi, thêm, sửa bài viết
-        Route::resource('posts', AdminPostApiController::class);
+        Route::resource('posts', PostsMarketingApiController::class);
+        // Ẩn, hiện bài viết
+        Route::get('status-post/{post_id}', [PostsMarketingApiController::class, 'statusPost']);
+
+        // QUẢN LÝ BÌNH LUẬN BÀI VIẾT
         // Gọi ra các bình luận của bài viết
-        Route::get('get-comment-post/{post_id}', [AdminComment_PostApiController::class, 'getCommentPost']);
+        Route::get('get-comment-post/{post_id}', [CommentsMarketingApiController::class, 'getCommentPost']);
         // Chức năng bình luận của bài viết
-        Route::post('comment-post/{post_id}/{comment_id?}', [AdminComment_PostApiController::class, 'commentPost']);
+        Route::post('comment-post/{post_id}/{comment_id?}', [CommentsMarketingApiController::class, 'commentPost']);
         // Chức năng sửa bình luận của bài viết
-        Route::put('update-comment-post/{post_id}/{comment_id}', [AdminComment_PostApiController::class, 'updatePost']);
+        Route::put('update-comment-post/{post_id}/{comment_id}', [CommentsMarketingApiController::class, 'updatePost']);
         // Chức năng xóa bình luận của bài viết
-        Route::delete('delete-comment-post/{post_id}/{comment_id}', [AdminComment_PostApiController::class, 'deleteComment']);
+        Route::delete('delete-comment-post/{post_id}/{comment_id}', [CommentsMarketingApiController::class, 'deleteComment']);
         // Ẩn bình luận bài viết
-        Route::get('status-comment-post/{post_id}/{comment_post_id}', [AdminComment_PostApiController::class, 'statusCommentPost']);
+        Route::get('status-comment-post/{post_id}/{comment_post_id}', [CommentsMarketingApiController::class, 'statusCommentPost']);
     });
 });
 

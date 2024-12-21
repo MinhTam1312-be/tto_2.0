@@ -1,21 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\AdminComment_DocumentResource;
-use App\Models\Chapter;
-use App\Models\Code;
 use App\Models\Comment_Document;
-use App\Models\Course;
 use App\Models\Document;
-use App\Models\Question;
 use App\Services\LogActivityService;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
-class AdminComment_DocumentApiController extends Controller
+class CommentsInstructorApiController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -346,114 +340,6 @@ class AdminComment_DocumentApiController extends Controller
             return response()->json([
                 'status' => 'fail',
                 'message' => $e->getMessage(),
-                'data' => null,
-            ], 500);
-        }
-    }
-
-    // Lấy ra các bài học theo khóa học
-    public function docByCourseAdmin($course_id)
-    {
-        try {
-            $user_id = auth('api')->user()->id;
-
-            // Kiểm tra xem $course_id có hợp lệ không
-            if (!Str::isUlid($course_id) || !Course::where('id', $course_id)->where('del_flag', true)->exists()) {
-                return response()->json([
-                    'status' => 'fail',
-                    'message' => 'Id khóa học không hợp lệ',
-                    'data' => null,
-                ], 400);
-            }
-
-            // Kiểm tra quyền truy cập khóa học dựa trên Enrollment và cờ del_flag
-            $course = Course::where('id', $course_id)->first();
-
-            if (is_null($course)) {
-                return response()->json([
-                    'status' => 'fail',
-                    'message' => 'Khóa học không tồn tại hoặc bạn không có quyền truy cập.',
-                    'data' => null,
-                ], 403);
-            }
-
-            // Lấy các chapter của khóa học
-            $chapters = Chapter::where('course_id', $course_id)->orderBy('serial_chapter', 'asc')->get();
-
-            if ($chapters->isEmpty()) {
-                return response()->json([
-                    'status' => 'fail',
-                    'message' => 'Không có chương nào thuộc khóa học này',
-                    'data' => null,
-                ], 404);
-            }
-
-            // Định dạng dữ liệu trả về
-            $chapterData = $chapters->map(function ($chapter) {
-                $documents = Document::select('id', 'serial_document', 'name_document', 'discription_document', 'serial_document', 'url_video', 'type_document', 'del_flag', 'updated_at')
-                    ->where('chapter_id', $chapter->id)
-                    ->where('del_flag', true)
-                    ->orderBy('serial_document', 'asc')
-                    ->get();
-
-                $documentData = $documents->map(function ($document) {
-                    $documentDetails = [
-                        'document_id' => $document->id,
-                        'serial_document' => $document->serial_document,
-                        'name_document' => $document->name_document,
-                        'discription_document' => $document->discription_document,
-                        'url_video' => $document->url_video,
-                        'type_document' => $document->type_document,
-                        'updated_at' => $document->updated_at,
-                    ];
-                    // $s = $document->status_docs->map(function ($e) { 
-                    //     return $e->status_docs;
-
-                    // });
-                    // dd($documentDetails);
-                    // Lấy dữ liệu bổ sung dựa trên type_document
-                    if ($document->type_document === 'quiz') {
-                        $quizs = Question::where('document_id', $document->id)->get();
-                        $documentDetails['quizs'] = $quizs->map(function ($quiz) {
-                            return [
-                                'id' => $quiz->id,
-                                'content_question' => $quiz->content_question,
-                                'answer_question' => $quiz->answer_question,
-                                'type_question' => $quiz->type_question,
-                                'updated_at' => $quiz->updated_at,
-                            ];
-                        });
-                    } else if ($document->type_document === 'code') {
-                        $codes = Code::where('document_id', $document->id)->get();
-                        $documentDetails['codes'] = $codes->map(function ($code) {
-                            return [
-                                'id' => $code->id,
-                                'question_code' => $code->question_code,
-                                'answer_code' => $code->answer_code,
-                                'tutorial_code' => $code->tutorial_code,
-                                'updated_at' => $code->updated_at,
-                            ];
-                        });
-                    }
-
-                    return $documentDetails;
-                });
-
-                return [
-                    'chapter_id' => $chapter->id,
-                    'chapter_name' => $chapter->name_chapter,
-                    'documents' => $documentData,
-                ];
-            });
-
-            return response()->json([
-                'course_id' => $course_id,
-                'data' => $chapterData,
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'fail',
-                'message' => 'Lỗi xảy ra: ' . $e->getMessage(),
                 'data' => null,
             ], 500);
         }

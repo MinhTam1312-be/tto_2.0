@@ -1,86 +1,17 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Marketing;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\AdminComment_PostResource;
 use App\Models\Comment_Post;
 use App\Models\Post;
 use App\Services\LogActivityService;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
-class AdminComment_PostApiController extends Controller
+class CommentsMarketingApiController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        try {
-            $comments_post = Comment_Post::with('user', 'comment', 'post')->get();
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Dữ liệu được lấy thành công',
-                'data' => AdminComment_PostResource::collection($comments_post),
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'fail',
-                'message' => $e->getMessage(),
-                'data' => null,
-            ], 500);
-        }
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
-
+    
     public function getCommentPost($post_id)
     {
         try {
@@ -318,24 +249,6 @@ class AdminComment_PostApiController extends Controller
         } catch (\Exception $e) {
             // Ghi log khi có lỗi xảy ra
             LogActivityService::log('thay_doi_trang_thai_binh_luan', "Đã xảy ra lỗi khi thay đổi trạng thái bình luận cho bài viết: {$post->title}: " . $e->getMessage(), 'fail');
-            return response()->json([
-                'status' => 'fail',
-                'message' => $e->getMessage(),
-                'data' => null,
-            ], 500);
-        }
-    }
-
-    public function getCommentPostAll()
-    {
-        try {
-            $comments_post = Comment_Post::with('user', 'comment', 'post')->get();
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Dữ liệu được lấy thành công',
-                'data' => AdminComment_PostResource::collection($comments_post),
-            ], 200);
-        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'fail',
                 'message' => $e->getMessage(),

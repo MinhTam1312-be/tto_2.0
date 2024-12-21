@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\AdminCodeResource;
@@ -11,10 +11,9 @@ use App\Models\Code;
 use App\Models\Document;
 use App\Models\Question;
 use App\Services\LogActivityService;
-use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Http\Request;
 
-class AdminDocumentApiController extends Controller
+class DocumentsInstructorApiController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -245,6 +244,7 @@ class AdminDocumentApiController extends Controller
         }
     }
 
+    // Gọi các bài học thuộc chương, thuộc khóa học
     public function getDocumentsByCourseChapter($course_id, $chapter_id)
     {
         try {
@@ -347,6 +347,7 @@ class AdminDocumentApiController extends Controller
         }
     }
 
+    
     // Thêm bài học dạng video
     public function storeVideoDocument(Request $request)
     {
@@ -974,7 +975,4 @@ class AdminDocumentApiController extends Controller
             ], 500);
         }
     }
-
-
-
 }
