@@ -139,7 +139,7 @@ class NoteApiController extends Controller
 
             // Kiểm tra nếu người dùng chưa đăng ký khóa học này
             $isEnrolled = Course::where('id', $course_id)
-                ->whereHas('modules.enrollments', function ($query) use ($user) {
+                ->whereHas('enrollments', function ($query) use ($user) {
                     $query->where('user_id', $user->id)
                         ->where('enroll', true);
                 })
@@ -220,7 +220,7 @@ class NoteApiController extends Controller
 
             // Kiểm tra nếu người dùng chưa đăng ký khóa học liên quan đến chapter này
             $isEnrolled = Chapter::where('id', $chapter_id)
-                ->whereHas('course.modules.enrollments', function ($query) use ($user) {
+                ->whereHas('course.enrollments', function ($query) use ($user) {
                     $query->where('user_id', $user->id)
                         ->where('enroll', true);
                 })
