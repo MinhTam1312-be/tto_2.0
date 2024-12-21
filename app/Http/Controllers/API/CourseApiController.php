@@ -162,7 +162,7 @@ class CourseApiController extends Controller
         //
     }
 
-    // Lọc khóa học theo lộ trình
+    // Lọc khóa học theo lộ trình (API này không xài tới)
     public function filterConditionCourse(Request $request)
     {
         // Lấy các tham số từ request
@@ -209,15 +209,15 @@ class CourseApiController extends Controller
     }
 
     // Lọc khóa học theo free và pro
-    public function coursePrice($price, $slug_route = null, $limit = null, )
+    public function coursePrice($price, $slug_route = null, $limit = null,)
     {
         try {
             $query = Course::with([
                 'user:id,fullname,email' // Lấy thông tin avatar từ user
             ])->withCount(
-                    'chapters as num_chapter',
-                    'documents as num_document'
-                );
+                'chapters as num_chapter',
+                'documents as num_document'
+            );
             if ($price == 'pro') {
                 $query->where('price_course', '>', 0);
             } else if ($price == 'free') {
@@ -266,7 +266,7 @@ class CourseApiController extends Controller
         }
     }
 
-    // Tìm kiếm khóa học
+    // Tìm kiếm khóa học (api này không xài tới)
     public function filterNameCourse(Request $request)
     {
         $searchTerm = $request->input('search');
@@ -322,7 +322,7 @@ class CourseApiController extends Controller
         }
     }
 
-    // Lấy tên các chapter theo ID khóa học
+    // Lấy tên các chapter theo ID khóa học (đã sửa)
     public function nameChapterByCourseId($course_id): JsonResponse
     {
         try {
@@ -362,7 +362,7 @@ class CourseApiController extends Controller
         }
     }
 
-    // Lấy tất cả các bài học của khóa học
+    // Lấy tất cả các bài học của khóa học (đã sửa)
     public function docByCourseId($course_id)
     {
         try {
@@ -378,7 +378,7 @@ class CourseApiController extends Controller
             }
 
             // Kiểm tra quyền truy cập khóa học dựa trên Enrollment và cờ del_flag
-            $course = Course::whereHas('modules.enrollments', function ($query) use ($user_id) {
+            $course = Course::whereHas('enrollments', function ($query) use ($user_id) {
                 $query->where('user_id', $user_id)
                     ->where('enroll', true)
                     ->where('del_flag', true);
@@ -487,7 +487,7 @@ class CourseApiController extends Controller
         }
     }
 
-    // Lấy ra trạng thái giữa các bài học, tuần tự
+    // Lấy ra trạng thái giữa các bài học, tuần tự (đã sửa)
     public function statusDocByDocument($document_id, $course_id)
     {
         try {
@@ -508,12 +508,9 @@ class CourseApiController extends Controller
                 ], 404);
             }
 
-            // Lấy danh sách module thuộc khóa học
-            $modules = Module::where('course_id', $course_id)->pluck('id')->toArray();
-
             // Kiểm tra Enrollment
             $enrollment = Enrollment::where('user_id', $user_id)
-                ->whereIn('module_id', $modules)
+                ->where('course_id', $course_id)
                 ->where('del_flag', true)
                 ->first();
 
@@ -553,18 +550,35 @@ class CourseApiController extends Controller
     }
 
 
-    // Tạo trạng thái cho bài học khi dùng bấm vào
+    // Tạo trạng thái cho bài học khi dùng bấm vào (đã sửa)
     public function createDocument($document_id, $course_id)
     {
         try {
-            $user_id = auth('api')->user()->id;
-            $modules = Module::where('course_id', $course_id)->pluck('id')->toArray();
+            $user = auth('api')->user();
+            if (!$user) {
+                return response()->json([
+                    'status' => 'fail',
+                    'message' => 'Người dùng chưa được xác thực',
+                    'data' => null,
+                ], 401);
+            }
+
+            $user_id = $user->id;
+
             $Enrollment_id = Enrollment::where('user_id', $user_id)
-                ->where('module_id', $modules)
+                ->where('course_id', $course_id)
                 ->where('del_flag', true)
                 ->select('id')
                 ->first();
-            // kiểm tra nếu như đã tồn tại rồi không càn tạo
+
+            if (!$Enrollment_id) {
+                return response()->json([
+                    'status' => 'fail',
+                    'message' => 'Không tìm thấy bản ghi Enrollment phù hợp',
+                    'data' => null,
+                ], 404);
+            }
+
             $status_doc = Status_Doc::firstOrCreate(
                 [
                     'document_id' => $document_id,
@@ -578,7 +592,7 @@ class CourseApiController extends Controller
             );
 
             return response()->json([
-                'data' => new AdminStatus_DocResource($status_doc)
+                'data' => $status_doc
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -589,7 +603,7 @@ class CourseApiController extends Controller
         }
     }
 
-    // Cập nhật trạng thái cho bài học
+    // Cập nhật trạng thái cho bài học (đã sửa)
     public function updateStatusDocument(Request $request)
     {
         try {
@@ -609,9 +623,8 @@ class CourseApiController extends Controller
                 'course_id.required' => 'Enrollment không được bỏ trống',
                 'course_id.exists' => 'Enrollment không được bỏ trống',
             ]);
-            $modules = Module::where('course_id', $request->course_id)->pluck('id')->toArray();
             $Enrollment = Enrollment::where('user_id', $user_id)
-                ->where('module_id', $modules)
+                ->where('course_id', $request->course_id)
                 ->where('del_flag', true)
                 ->select('id')
                 ->first();
@@ -641,12 +654,10 @@ class CourseApiController extends Controller
         }
     }
 
-
+    //(đã sửa)
     public function docForUser($course_id)
     {
         try {
-            auth('api')->user();
-
             // Kiểm tra tính hợp lệ của $course_id
             if (!Str::isUlid($course_id)) {
                 return response()->json([
@@ -738,61 +749,7 @@ class CourseApiController extends Controller
         }
     }
 
-    // Gợi ý khóa học có trong lộ trình
-    public function courseSuggestions($course_id)
-    {
-        try {
-            $user = auth('api')->user();
-            if (!$user) {
-                return response()->json(['message' => 'Người dùng chưa đăng nhập.'], 401);
-            }
-            // $course = Module::with(['course', 'route'])->where('course_id', $course_id)->get();
-            $route = Route::whereHas('modules', function ($query) use ($course_id) {
-                $query->where('course_id', $course_id);
-            })
-                ->orderByRaw("CASE WHEN status = 'customize' THEN 1 ELSE 2 END")
-                ->first(); // Ưu tiên lấy lộ trình có trạng thái customize
-
-
-            $suggestedCourses = Course::withCount([
-                'chapters as num_chapter',
-                'documents as num_document'
-            ])
-                ->whereHas('modules', function ($query) use ($route, $course_id) {
-                    $query->where('route_id', $route->id)
-                        ->where('course_id', '!=', $course_id);
-                })
-                ->get();
-            // $data = [$suggestedCourses];
-            foreach ($suggestedCourses as $course) {
-                // Lấy danh sách module của khóa học hiện tại
-                $modules = Module::where('course_id', $course->id)->pluck('id')->toArray();
-
-                // Kiểm tra xem người dùng đã đăng ký bất kỳ module nào của khóa học này chưa
-                $enrollmentExists = Enrollment::where('user_id', $user->id)
-                    ->whereIn('module_id', $modules)
-                    ->exists();
-
-                // Nếu chưa đăng ký khóa học, thêm vào mảng
-                if (!$enrollmentExists) {
-                    $listCourses[] = $course; // Thêm khóa học vào danh sách
-                }
-            }
-
-            // Trả về danh sách các khóa học chưa đăng ký
-            return response()->json([
-                'data' => $listCourses,
-            ], 200);
-        } catch (\Exception $e) {
-            // Trả về thông báo lỗi cho người dùng
-            return response()->json([
-                'error' => 'Đã xảy ra lỗi trong quá trình tìm kiếm.',
-                'details' => $e->getMessage(), // Có thể loại bỏ trong production để bảo mật
-            ], 500);
-        }
-    }
-
-    // Lấy ra tất cả trạng thái bài học theo khóa học
+    // Lấy ra tất cả trạng thái bài học theo khóa học (đã sửa)
     public function getAllStatusDocByCourse($course_id)
     {
         try {
@@ -814,17 +771,10 @@ class CourseApiController extends Controller
 
             // láy auth user
             $user_id = auth('api')->user()->id;
-            // lẩy ra id module
-            $modules = Module::where('course_id', $course_id)->pluck('id')->toArray();
-            if (!$modules) {
-                return response()->json([
-                    'error' => 'Không tìm thấy module phù hợp.'
-                ], 404);
-            }
             // dd($modules);
             // lấy ra Enrollment_id
             $Enrollment_id = Enrollment::where('user_id', $user_id)
-                ->whereIn('module_id', $modules)
+                ->where('course_id', $course_id)
                 ->where('del_flag', true)
                 ->select('id')
                 ->first();
@@ -846,6 +796,8 @@ class CourseApiController extends Controller
             ], 500);
         }
     }
+
+    // Lấy ra khóa học có cùng lộ trình để gợi ý và không lấy ra khóa học đã truyền vào (đã sửa)
     public function courseNext(Request $request, $orderby)
     {
         try {
@@ -861,18 +813,9 @@ class CourseApiController extends Controller
             $courseIds = $request->course_id;
 
             // Retrieve related data
-            $moduleIds = Module::whereIn('course_id', $courseIds)->pluck('id');
-            $enrolledModuleIds = Enrollment::whereIn('module_id', $moduleIds)->pluck('module_id');
-            $routeIds = Module::whereIn('id', $enrolledModuleIds)->pluck('route_id');
-
-            // Query courses
-            $coursesQuery = Course::withCount(['chapters as num_chapter', 'documents as num_document'])
-                ->where('del_flag', true)
-                ->whereHas('modules', function ($query) use ($routeIds, $courseIds) {
-                    $query->whereIn('route_id', $routeIds)
-                        ->whereNotIn('course_id', $courseIds);
-                });
-
+            $routeIds = Module::whereIn('course_id', $courseIds)->pluck('route_id');
+            $course_id = Module::whereIn('route_id', $routeIds)->whereNotIn('course_id', $courseIds)->pluck('course_id');
+            $coursesQuery = Course::find($course_id);
             // Apply ordering filter
             if ($orderby === 'free') {
                 $coursesQuery->where('price_course', 0);
@@ -880,13 +823,10 @@ class CourseApiController extends Controller
                 $coursesQuery->where('price_course', '>', 0);
             }
 
-            // Get results
-            $courses = $coursesQuery->get();
-
             return response()->json([
                 'status' => 'success',
                 'message' => 'Lấy dữ liệu thành công',
-                'data' => CourseResource::collection($courses),
+                'data' => CourseResource::collection($coursesQuery),
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -896,6 +836,7 @@ class CourseApiController extends Controller
         }
     }
 
+    // Lấy ra 10% khóa học
     public function tenPercentCourse($course_id)
     {
         try {
@@ -992,6 +933,8 @@ class CourseApiController extends Controller
             ], 500);
         }
     }
+
+    // đổi slug thành id Course, Route, Post
     public function slugByIdCourse($slug, $table)
     {
         try {
@@ -1029,6 +972,8 @@ class CourseApiController extends Controller
             ], 500);
         }
     }
+
+
     public function handleCourseRequest($course_id)
     {
         try {
@@ -1049,8 +994,8 @@ class CourseApiController extends Controller
             ])->where('id', $course_id)->where('del_flag', true)->firstOrFail();
 
             // Lấy danh sách feedbacks
-            $feedbacks = Enrollment::with(['module.course', 'user'])
-                ->whereHas('module.course', function ($query) use ($course_id) {
+            $feedbacks = Enrollment::with(['course', 'user'])
+                ->whereHas('course', function ($query) use ($course_id) {
                     $query->where('id', $course_id);
                 })
                 ->where('rating_course', '>=', 1)
