@@ -515,7 +515,7 @@ Route::prefix('client')->group(function () {
     Route::get('course-price/{price}/{slug_route?}/{limit?}', [CourseApiController::class, 'coursePrice']);
     // Lấy tên feedback của course theo slug_coursecourse
     Route::get('feedback-course/{course_id}/{star}/{limit}', [EnrollmentApiController::class, 'feedbackCourse']);
-    // Người dùng đăng ký khóa học    
+    // Người dùng đăngs ký khóa học    
     Route::get('user-register-course/{course_id}', [EnrollmentApiController::class, 'userRegisterCourse']);
     // Check xem người dùng đã đăng hay chưa
     Route::get('check-enrollment/{courseId}', [EnrollmentApiController::class, 'checkEnrollment']);

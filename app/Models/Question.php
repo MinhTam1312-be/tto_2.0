@@ -29,6 +29,7 @@ class Question extends Model
     use HasFactory;
     protected $table = 'questions';
     protected $fillable = [
+        'id',
         'content_question',
         'answer_question',
         'type_question',

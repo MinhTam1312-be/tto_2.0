@@ -93,7 +93,7 @@ class DocumentsInstructorApiController extends Controller
 
             // Lấy dữ liệu bổ sung dựa trên type_document
             if ($document->type_document === 'quiz') {
-                $quizs = Question::where('document_id', $document->id)->get();
+                $quizs = Question::where('id', $document->id)->get();
                 $documentDetails['quizs'] = $quizs->map(function ($quiz) {
                     return [
                         'id' => $quiz->id,
@@ -104,7 +104,7 @@ class DocumentsInstructorApiController extends Controller
                     ];
                 });
             } elseif ($document->type_document === 'code') {
-                $codes = Code::where('document_id', $document->id)->get();
+                $codes = Code::where('id', $document->id)->get();
                 $documentDetails['codes'] = $codes->map(function ($code) {
                     return [
                         'id' => $code->id,
@@ -201,7 +201,7 @@ class DocumentsInstructorApiController extends Controller
 
                 // Lấy dữ liệu bổ sung dựa trên type_document
                 if ($document->type_document === 'quiz') {
-                    $quizs = Question::where('document_id', $document->id)->get();
+                    $quizs = Question::where('id', $document->id)->get();
                     $documentDetails['quizs'] = $quizs->map(function ($quiz) {
                         return [
                             'id' => $quiz->id,
@@ -212,7 +212,7 @@ class DocumentsInstructorApiController extends Controller
                         ];
                     });
                 } elseif ($document->type_document === 'code') {
-                    $codes = Code::where('document_id', $document->id)->get();
+                    $codes = Code::where('id', $document->id)->get();
                     $documentDetails['codes'] = $codes->map(function ($code) {
                         return [
                             'id' => $code->id,
@@ -303,7 +303,7 @@ class DocumentsInstructorApiController extends Controller
 
                 // Lấy dữ liệu bổ sung dựa trên type_document
                 if ($document->type_document === 'quiz') {
-                    $quizs = Question::where('document_id', $document->id)->get();
+                    $quizs = Question::where('id', $document->id)->get();
                     $documentDetails['quizs'] = $quizs->map(function ($quiz) {
                         return [
                             'id' => $quiz->id,
@@ -314,7 +314,7 @@ class DocumentsInstructorApiController extends Controller
                         ];
                     });
                 } elseif ($document->type_document === 'code') {
-                    $codes = Code::where('document_id', $document->id)->get();
+                    $codes = Code::where('id', $document->id)->get();
                     $documentDetails['codes'] = $codes->map(function ($code) {
                         return [
                             'id' => $code->id,
@@ -347,7 +347,7 @@ class DocumentsInstructorApiController extends Controller
         }
     }
 
-    
+
     // Thêm bài học dạng video
     public function storeVideoDocument(Request $request)
     {
@@ -355,7 +355,7 @@ class DocumentsInstructorApiController extends Controller
             // Xác thực dữ liệu đầu vào
             $validatedData = $request->validate([
                 'name_document' => 'required|string|max:255',
-                'discription_document' => 'required|string|max:255',
+                'discription_document' => 'required|string',
                 'serial_document' => 'required|min:1|max:100',
                 'url_video' => 'required|url',
                 'chapter_id' => 'required|exists:chapters,id'
@@ -432,18 +432,18 @@ class DocumentsInstructorApiController extends Controller
                 'type_question' => 'in:multiple_choice,fill,true_false',
                 'chapter_id' => 'required|exists:chapters,id',
                 'name_document' => 'required|string|max:255',
-                'discription_document' => 'required|string|max:255',
-                'serial_document' => 'required|min:1|max:100',
-                'content_question' => 'required',
-                'answer_question' => 'required',
+                'discription_document' => 'required|string',
+                'serial_document' => 'required|integer|min:1|max:100',
+                'content_question' => 'required|string',
+                'answer_question' => 'required|string',
             ], [
                 'name_document.required' => 'Tên tài liệu là bắt buộc.',
                 'name_document.string' => 'Tên tài liệu phải là một chuỗi ký tự.',
                 'name_document.max' => 'Tên tài liệu không được vượt quá 255 ký tự.',
                 'discription_document.required' => 'Mô tả tài liệu là bắt buộc.',
                 'discription_document.string' => 'Mô tả tài liệu phải là một chuỗi ký tự.',
-                'discription_document.max' => 'Mô tả tài liệu không được vượt quá 255 ký tự.',
                 'serial_document.required' => 'Số thứ tự bài học là bắt buộc.',
+                'serial_document.integer' => 'Số thứ tự bài học phải là số nguyên.',
                 'serial_document.min' => 'Số thứ tự bài học nhỏ nhất là 1.',
                 'serial_document.max' => 'Số thứ tự bài học không vượt quá 100.',
                 'chapter_id.required' => 'ID chương là bắt buộc.',
@@ -454,28 +454,27 @@ class DocumentsInstructorApiController extends Controller
 
             // Tạo tài liệu quiz mới
             $document = Document::create([
-                'name_document' => $request->name_document,
-                'discription_document' => $request->discription_document,
-                'serial_document' => $request->serial_document,
+                'name_document' => $validatedData['name_document'],
+                'discription_document' => $validatedData['discription_document'],
+                'serial_document' => $validatedData['serial_document'],
                 'url_video' => null,
                 'type_document' => 'quiz',
-                'chapter_id' => $request->chapter_id,
+                'chapter_id' => $validatedData['chapter_id'],
                 'del_flag' => true,
             ]);
 
             // Lấy thông tin tên chương và tên khóa học
-            $chapter = Chapter::with('course')->find($document->chapter_id);
+            $chapter = Chapter::with('course')->findOrFail($document->chapter_id);
             $courseName = $chapter->course->name_course;
             $chapterName = $chapter->name_chapter;
 
             // Tạo câu hỏi quiz
-            $newDocument = new AdminDocumentResource($document);
-            $newQuestion = Question::create([
-                'content_question' => $request->content_question,
-                'answer_question' => $request->answer_question,
-                'type_question' => $request->type_question,
+            $question = Question::create([
+                'content_question' => $validatedData['content_question'],
+                'answer_question' => $validatedData['answer_question'],
+                'type_question' => $validatedData['type_question'],
                 'del_flag' => true,
-                'document_id' => $newDocument->id
+                'id' => $document->id
             ]);
 
             // Ghi log khi tài liệu quiz được tạo thành công
@@ -493,7 +492,7 @@ class DocumentsInstructorApiController extends Controller
                     'chapter_name' => $chapterName,
                     'course_name' => $courseName,
                 ],
-                'question' => new AdminQuestionResource($newQuestion),
+                'question' => new AdminQuestionResource($question),
             ], 201);
         } catch (\Exception $e) {
             // Ghi log khi có lỗi xảy ra
@@ -519,7 +518,7 @@ class DocumentsInstructorApiController extends Controller
             $validatedData = $request->validate([
                 'chapter_id' => 'required|exists:chapters,id',
                 'name_document' => 'required|string|max:255',
-                'discription_document' => 'required|string|max:255',
+                'discription_document' => 'required|string',
                 'serial_document' => 'required|min:1|max:100',
                 'question_code' => 'required',
                 'answer_code' => 'required',
@@ -564,7 +563,7 @@ class DocumentsInstructorApiController extends Controller
                 'answer_code' => $request->answer_code,
                 'tutorial_code' => $request->tutorial_code,
                 'del_flag' => true,
-                'document_id' => $newDocument->id
+                'id' => $newDocument->id
             ]);
 
             // Ghi log khi tài liệu code được tạo thành công
@@ -704,7 +703,7 @@ class DocumentsInstructorApiController extends Controller
             }
 
             // Kiểm tra câu hỏi liên quan tới tài liệu
-            $question = Question::where('document_id', $document->id)->first();
+            $question = Question::where('id', $document->id)->first();
             if (!$question) {
                 return response()->json([
                     'status' => 'fail',
@@ -828,7 +827,7 @@ class DocumentsInstructorApiController extends Controller
             }
 
             // Kiểm tra bài học code liên quan tới tài liệu
-            $code = Code::where('document_id', $document->id)->first();
+            $code = Code::where('id', $document->id)->first();
             if (!$code) {
                 return response()->json([
                     'status' => 'fail',

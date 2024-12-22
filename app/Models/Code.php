@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 class Code extends Model
 {
+    protected $primaryKey = 'id'; // id là khóa chính
     // Thiết lập kiểu của khóa chính là chuỗi (string)
     protected $keyType = 'string';
 
@@ -27,6 +28,7 @@ class Code extends Model
     use HasFactory;
     protected $table = 'codes';
     protected $fillable = [
+        'id',
         'question_code',
         'answer_code',
         'tutorial_code',
@@ -36,6 +38,6 @@ class Code extends Model
     //DOCUMENT
     public function document()
     {
-        return $this->belongsTo(Document::class);
+        return $this->belongsTo(Document::class, 'id', 'id');
     }
 }
