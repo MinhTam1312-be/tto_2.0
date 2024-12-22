@@ -408,9 +408,8 @@ class CourseApiController extends Controller
                 ->get()
                 ->map(function ($chapter) use ($course_id) {
                     $user_id = auth('api')->user()->id;
-                    $modules = Module::where('course_id', $course_id)->pluck('id');
                     $enrollment = Enrollment::where('user_id', $user_id)
-                        ->whereIn('module_id', $modules)
+                        ->where('course_id', $course_id)
                         ->where('del_flag', true)
                         ->select('id')
                         ->first();
