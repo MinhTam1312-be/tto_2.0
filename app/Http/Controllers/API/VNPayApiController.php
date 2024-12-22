@@ -373,8 +373,8 @@ class VNPayApiController extends Controller
 
     public function getMomo(Request $request, $course_id, $course_price)
     {
-        // $user_id = auth('api')->user()->id;
-        $user_id = "01JFJAD8RQZ6KAEPP7JWP63Z44";
+        $user_id = auth('api')->user()->id;
+        // $user_id = "01JFJAD8RQZ6KAEPP7JWP63Z44";
         if (!$user_id) {
             return response()->json(['message' => 'Người dùng chưa đăng nhập.'], 401);
         }
