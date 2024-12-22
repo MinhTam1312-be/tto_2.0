@@ -484,7 +484,7 @@ Route::prefix('client')->group(function () {
     // Xóa ảnh user profile   
     Route::delete('delete-avatar', [UserApiController::class, 'deleteAvatar'])->middleware('auth.api');
 
-
+         
     // MAIN  
     // Lấy ra các lộ trình
     Route::resource('route', RouteApiController::class);  
