@@ -15,19 +15,41 @@ use Illuminate\Support\Facades\DB;
 
 class StatisticsCourseController extends Controller
 {
-    public function getTotalCourseApprovedUnapprovedLecturer()
+    // Tổng học viên chưa hoàn thành, và đã hoàn thành, tổng khóa học, tổng người đăng ký của giảng viên (Đã sửa)
+    public function statisticalProgressClient()
     {
         try {
-            $totalCourse = Course::count();
-            $totalCourseApproved = Course::where('status_course', 'active')->count();
-            $totalCourseUnapproved = Course::where('status_course', 'inactive')->count();
-            $totalCourseLecturer = User::where('role', 'instructor')->count();
+            $user_id = auth('api')->user()->id;
+
+            // Đếm số lượng enrollment có status_course là 'in_progress'
+            $inProgressCount = Enrollment::whereHas('course', function ($query) use ($user_id) {
+                $query->where('user_id', $user_id);
+            })->where('status_course', 'in_progress')
+                ->where('enroll', true)
+                ->count();
+
+            // Đếm số lượng enrollment có status_course là 'completed'
+            $completedCount = Enrollment::whereHas('course', function ($query) use ($user_id) {
+                $query->where('user_id', $user_id);
+            })->where('status_course', 'completed')
+                ->where('enroll', true)
+                ->count();
+
+            // Đếm ra số lượng khóa học của giảng viên
+            $totalCourse = Course::where('user_id', $user_id)->count();
+
+            // Đếm ra tổng người dùng đăng ký khóa học của giảng viên
+            $completedCount = Enrollment::whereHas('course', function ($query) use ($user_id) {
+                $query->where('user_id', $user_id);
+            })->where('enroll', true)
+                ->count();
+
             return response()->json([
                 'status' => 'success',
-                'totalCourse' => $totalCourse,
-                'totalCourseApproved' => $totalCourseApproved,
-                'totalCourseUnapproved' => $totalCourseUnapproved,
-                'totalCourseLecturer' => $totalCourseLecturer,
+                'in_progress' => $inProgressCount,
+                'completed' => $completedCount,
+                'total_course' => $totalCourse,
+                'enroll_user' => $completedCount,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -37,18 +59,6 @@ class StatisticsCourseController extends Controller
             ], 500);
         }
     }
-
-    
-
-
-    
-
-
-
-    
-
-
-    
 
     // Thống kê tổng người dùng đã đăng ký và hoàn thành khóa họchọc
     public function getTotalUserProgress()
@@ -84,7 +94,6 @@ class StatisticsCourseController extends Controller
             ], 500);
         }
     }
-
 
     // Thống kê tổng người dùng đã đăng ký và hoàn thành khóa học
     public function getTotalUser($client = null)

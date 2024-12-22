@@ -31,7 +31,7 @@ class StatisticsAdminController extends Controller
             // Số nhân viên 
             $totalCourseLecturer = User::whereIn('role', ['instructor', 'accountant', 'marketing'])->count();
             // Doanh thu
-            $totalRevenue = Course::whereHas('modules.enrollments', function ($query) {
+            $totalRevenue = Course::whereHas('enrollments', function ($query) {
                 $query->where('enroll', true);
             })
                 ->get()
@@ -72,6 +72,8 @@ class StatisticsAdminController extends Controller
             ], 500);
         }
     }
+
+    // Thống kê tổng doanh thu theo tháng
     public function getTotalCourseRevenue()
     {
         try {
@@ -80,7 +82,7 @@ class StatisticsAdminController extends Controller
 
             // Truy vấn doanh thu theo tháng
             $monthlyRevenue = Course::with([
-                'modules.enrollments' => function ($query) {
+                'enrollments' => function ($query) {
                     $query->where('enroll', true); // Chỉ lấy các enrollment có trạng thái true
                 }
             ])
@@ -89,8 +91,7 @@ class StatisticsAdminController extends Controller
                 WHEN discount_price_course IS NOT NULL THEN discount_price_course 
                 ELSE price_course 
             END) AS total_price")
-                ->join('modules', 'modules.course_id', '=', 'courses.id')
-                ->join('enrollments', 'enrollments.module_id', '=', 'modules.id')
+                ->join('enrollments', 'enrollments.course_id', '=', 'courses.id')
                 ->whereYear('enrollments.created_at', $currentYear) // Chỉ lấy dữ liệu trong năm hiện tại
                 ->groupBy('month')
                 ->orderBy('month')
@@ -115,6 +116,8 @@ class StatisticsAdminController extends Controller
             ], 500);
         }
     }
+
+    // Thống kê khóa học mà học viên đã học, học viên đang học, tổng đánh giá của khóa học, lượt xem của khóa học
     public function getCourseInProgressCompletedAssessmentView($course_id)
     {
         try {
@@ -122,20 +125,20 @@ class StatisticsAdminController extends Controller
             if (!$user) {
                 return response()->json(['message' => 'Người dùng chưa được xác thực.'], 401);
             }
-            $moduleId = Module::where('course_id', $course_id)->pluck('id')->first();
             // lấy ra các khóa học đã hoàn thành
             $totalCourseComplted = Enrollment::where('status_course', 'completed')
-                ->where('module_id', $moduleId)
+                ->where('course_id', $course_id)
                 ->count();
             // Lấy ra ra các khóa học chưa hoàn thành
             $totalCourseInProgress = Enrollment::where('status_course', 'in_progress')
-                ->where('module_id', $moduleId)
+                ->where('course_id', $course_id)
                 ->count();
             // tổng đánh giá của của học viên
-            $totalCoursAssment = Enrollment::where('status_course', 'completed')
-                ->where('module_id', $moduleId)
-                ->avg('rating_course');
-            $totalScore = round($totalCoursAssment, 1);
+            $totalCourseAssessment = Enrollment::where('status_course', 'completed')
+                ->where('course_id', $course_id)
+                ->avg('rating_course') ?? 0;
+
+            $totalScore = round($totalCourseAssessment, 1);
             // tổng lượt xem của video
             $totalViewCourse = Course::where('id', $course_id)->sum('views_course');
 
@@ -153,6 +156,8 @@ class StatisticsAdminController extends Controller
             ], 500);
         }
     }
+
+    // Thống kê doanh thu theo tháng của một khóa học
     public function getCourseRevenue($course_id)
     {
         try {
@@ -160,49 +165,53 @@ class StatisticsAdminController extends Controller
             if (!$user) {
                 return response()->json(['message' => 'Người dùng chưa được xác thực.'], 401);
             }
-            // lấy dữ liệu
-            $moduleId = Module::where('course_id', $course_id)->pluck('id');
-            // kiểm tra lỗis
-            if ($moduleId->isEmpty()) {
-                return response()->json([
-                    'status' => 'fail',
-                    'message' => 'Không tìm thấy module nào cho course_id này.'
-                ], 404);
+
+            // Đảm bảo $course_id là mảng
+            if (!is_array($course_id)) {
+                $course_id = [$course_id];
             }
-            // lấy dữ liệu
+
+            // Lấy danh sách enrollment IDs
             $totalCourseComplted = Enrollment::where('enroll', true)
-                ->whereIn('module_id', $moduleId)
+                ->whereIn('course_id', $course_id)
                 ->pluck('id');
-            // kiểm tra lỗi
+
+            // Kiểm tra nếu không có enrollment nào
             if ($totalCourseComplted->isEmpty()) {
                 return response()->json([
                     'status' => 'fail',
-                    'message' => 'Không tìm thấy enrollment nào cho các module này.'
+                    'message' => 'Không tìm thấy enrollment nào cho các khóa học này.'
                 ], 404);
             }
-            // lấy dữ liệu
-            $totalAmount = Transaction::where('status', 'completed')->whereIn('enrollment_id', $totalCourseComplted)
-                ->selectRaw("EXTRACT(MONTH FROM created_at) AS month")
-                ->selectRaw("SUM(amount) AS total_amount")
+
+            // Lấy dữ liệu doanh thu
+            $totalAmount = Transaction::where('status', 'completed')
+                ->whereIn('enrollment_id', $totalCourseComplted)
+                ->selectRaw("EXTRACT(MONTH FROM created_at) AS month, SUM(amount) AS total_amount")
                 ->groupBy('month')
                 ->orderBy('month')
                 ->get();
-            // kiểm tra lỗi
+
+            // Kiểm tra nếu không có giao dịch nào
             if ($totalAmount->isEmpty()) {
                 return response()->json([
                     'status' => 'fail',
                     'message' => 'Không tìm thấy giao dịch nào trong các enrollment này.'
                 ], 404);
             }
-            $totalCoursebyMouth = $totalAmount->map(function ($revenue) {
+
+            // Định dạng kết quả
+            $totalCoursebyMonth = $totalAmount->map(function ($revenue) {
                 return [
                     'month' => (int) $revenue->month,
-                    'total_amount' => number_format($revenue->total_amount, 0, ',', '.') . ' VND'
+                    'total_amount' => (float) $revenue->total_amount,
                 ];
             });
+
             return response()->json([
-                'totalCoursebyMouth' => $totalCoursebyMouth,
+                'totalCoursebyMonth' => $totalCoursebyMonth,
             ], 200);
+
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'fail',
@@ -211,6 +220,8 @@ class StatisticsAdminController extends Controller
             ], 500);
         }
     }
+
+    // Thống kê tổng người dùng, tổng đơn hàng hôm nay, tổng doanh thu hôm nay
     public function getTotalClinetCartProfitCartNow()
     {
         try {
@@ -232,20 +243,6 @@ class StatisticsAdminController extends Controller
             $cartToDayMoney = Transaction::whereIn('enrollment_id', $enrollmentId)
                 ->whereDate('created_at', Carbon::today())
                 ->sum('amount');
-
-            // $totalCourseNow = count($courseIds);
-
-            // $moduleIds  = Enrollment::where('enroll', true)
-            //     ->whereDate('created_at', Carbon::today())
-            //     ->pluck('module_id')
-            //     ->toArray();
-            // $courseIds = Module::whereIn('id', $moduleIds)
-            //     // ->pluck('course_id')
-            //     ->toArray();
-            // $totalCourseCartAll = count($courseIds);
-            // // tổng đơn hàng 
-            // $moduleId  = Enrollment::where('enroll', true)->toArray();
-
 
             return response()->json([
                 'totalUserClinet' => $usersClinet,

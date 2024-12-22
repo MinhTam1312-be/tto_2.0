@@ -267,26 +267,20 @@ Route::prefix('admin')->group(function () {
         Route::get('statistical-post-by-user', [StatisticsPostController::class, 'statisticalPostByUser']);
         // Tổng lượt xem qua tháng của các bài viết đó
         Route::get('get-total-view-mouth', [StatisticsPostController::class, 'getTotalViewMouth']);
-        // Tổng khóa học đã duyệt, chưa duyệt, tổng giảng viên, tổng khóa học
-        Route::get('statistical-course-management', [StatisticsCourseController::class, 'getTotalCourseApprovedUnapprovedLecturer']);
-        // Tổng khóa học đã duyệt, chưa duyệt, tổng giảng viên, tổng khóa học
-        Route::get('statistical-course-Approved-management-by-mouth', [StatisticsCourseController::class, 'getCourseApproveByMouth']);
         // Thống kê tổng khóa học, khóa học được đăng kí vào hôm nay, tồng giảng viên, doanh thu sau thuế
         Route::get('statistical-admin', [StatisticsAdminController::class, 'getTotalCourseCartNowStaffRevenue']);
-        // Tổng khóa học đã duyệt, chưa duyệt, tổng giảng viên, tổng khóa học 
+        // Thống kê tổng doanh thu theo tháng
         Route::get('statistical-revenue-mouth', [StatisticsAdminController::class, 'getTotalCourseRevenue']);
-        // Tổng khóa học đã duyệt, chưa duyệt, tổng giảng viên, tổng khóa học
+        // Thống kê khóa học mà học viên đã học, học viên đang học, tổng đánh giá của khóa học, lượt xem của khóa học
         Route::get('statistical-admin-by-course/{course_id}', [StatisticsAdminController::class, 'getCourseInProgressCompletedAssessmentView']);
-        // Tổng khóa học đã duyệt, chưa duyệt, tổng giảng viên, tổng khóa học
+        // Thống kê doanh thu theo tháng của một khóa học
         Route::get('statistical-admin-revenue-course/{course_id}', [StatisticsAdminController::class, 'getCourseRevenue']);
-        // Tổng khóa học đã duyệt, chưa duyệt, tổng giảng viên, tổng khóa học
+        // Thống kê tổng người dùng, tổng đơn hàng hôm nay, tổng doanh thu hôm nay
         Route::get('statistical-accountant', [StatisticsAdminController::class, 'getTotalClinetCartProfitCartNow']);
         // Thống kê tổng số học viên đã đăng ký ở các trạng thái
         Route::get('statistical-user-progress', [StatisticsCourseController::class, 'getTotalUserProgress']);
         // Thống kê tổng số người dùng có quyền client hoặc các quyền admin kháckhác
         Route::get('statistical-user/{client?}', [StatisticsCourseController::class, 'getTotalUser']);
-        // Tổng khóa học 
-
 
 
 

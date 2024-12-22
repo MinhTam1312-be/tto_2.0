@@ -29,6 +29,8 @@ class StatisticsPostController extends Controller
             ], 500);
         }
     }
+
+    // Thống kê tổng bài viết, tổng comment, tổng danh mục thuộc bài viết, tổng lượt xem bài viết của người dùng đăng nhập
     public function statisticalPostByUser(): JsonResponse
     {
         try {
@@ -65,8 +67,9 @@ class StatisticsPostController extends Controller
             ], 500);
         }
     }
-    public function getTotalViewMouth() {
-        try{
+    public function getTotalViewMouth()
+    {
+        try {
             $user = auth('api')->user();
             if (!$user) {
                 return response()->json(['message' => 'Người dùng chưa được xác thực.'], 401);
@@ -75,15 +78,15 @@ class StatisticsPostController extends Controller
                 DB::raw('EXTRACT(MONTH FROM created_at) as month'),
                 DB::raw('SUM(views_post) as total_views')
             )->where('user_id', $user->id)
-            ->groupBy('month')
-            ->orderBy('month', 'asc')
-            ->get();
-    
-        return response()->json([
-            'status' => 'success',
-            'data' => $monthlyViews,
-        ], 200);
-        }catch (\Exception $e) {
+                ->groupBy('month')
+                ->orderBy('month', 'asc')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $monthlyViews,
+            ], 200);
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'fail',
                 'message' => $e->getMessage(),
