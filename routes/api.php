@@ -184,7 +184,7 @@ Route::prefix('accountant')->group(function () {
         // Lấy thống kê theo yêu cầu
         Route::get('transtion-statistics-request/{filterBy}/{status}/{order}', [StatisticsAccountantApiController::class, 'getTranstionStatisticsRequest']);
         // Lấy chi tiết transtion ra các khóa học và thông tin user
-        Route::get('get-detail-transtion/{transtion_id}', [StatisticsAccountantApiController::class, 'getDetailTranstion']);
+        Route::get('get-detail-transtion/{transactions_id}', [StatisticsAccountantApiController::class, 'getDetailTranstion']);
         // Lấy chi tiết khóa học ra các trastion
         Route::get('/courses-by-transactions/{slug_course}/{filterBy}/{status}/{order}', [StatisticsAccountantApiController::class, 'getTransactionsByCourse']);
         // Lấy ra người dùng có bao nhiêu thanh đơn thanh toán

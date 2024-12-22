@@ -89,14 +89,14 @@ class StatisticsInstructorApiController extends Controller
                 ->whereIn(
                     'enrollment_id',
                     Enrollment::where('enroll', true)
-                        ->whereHas('module.course', function ($query) use ($userId) {
+                        ->whereHas('course', function ($query) use ($userId) {
                             $query->where('user_id', $userId);
                         })->pluck('id')
                 )->get()->sum(function ($transaction) {
                     // Lấy khóa học liên quan
                     $enrollment = Enrollment::find($transaction->enrollment_id);
-                    if ($enrollment && $enrollment->module) {
-                        $course = $enrollment->module->course;
+                    if ($enrollment && $enrollment) {
+                        $course = $enrollment->course;
                         $taxAmount = ($transaction->amount * $course->tax_rate) / 100;
                         return $transaction->amount - $taxAmount; // Trừ thuế
                     }
@@ -142,13 +142,10 @@ class StatisticsInstructorApiController extends Controller
             $courses = Course::where('user_id', $user_id)
                 ->where('del_flag', true) // Kiểm tra cờ del_flag của Course
                 ->with([
-                    'modules' => function ($query) {
-                        $query->where('del_flag', true); // Kiểm tra cờ del_flag của Module
-                    },
-                    'modules.enrollments' => function ($query) {
+                    'enrollments' => function ($query) {
                         $query->where('enroll', true)->where('del_flag', true); // Kiểm tra cờ enroll và del_flag của Enrollment
                     },
-                    'modules.enrollments.transactions' => function ($query) {
+                    'enrollments.transactions' => function ($query) {
                         $query->where('del_flag', true); // Kiểm tra cờ del_flag của Transaction
                     }
                 ])
@@ -159,31 +156,22 @@ class StatisticsInstructorApiController extends Controller
 
             // Duyệt qua từng khóa học
             foreach ($courses as $course) {
-                if (empty($course->modules)) {
-                    continue; // Bỏ qua nếu không có modules
-                }
 
-                // Duyệt qua từng module trong khóa học
-                foreach ($course->modules as $module) {
-                    if (empty($module->enrollments)) {
-                        continue; // Bỏ qua nếu không có enrollments
+                // Duyệt qua từng enrollment trong module
+                foreach ($course->enrollments as $enrollment) {
+                    $transaction = $enrollment->transactions; // Quan hệ hasOne
+
+                    // Kiểm tra transaction có hợp lệ hay không
+                    if (!$transaction || !isset($transaction->created_at)) {
+                        continue; // Bỏ qua nếu transaction không hợp lệ
                     }
 
-                    // Duyệt qua từng enrollment trong module
-                    foreach ($module->enrollments as $enrollment) {
-                        $transaction = $enrollment->transactions; // Quan hệ hasOne
+                    // Lấy tháng từ ngày tạo transaction
+                    $month = (int) $transaction->created_at->format('m'); // Định dạng tháng: MM
 
-                        // Kiểm tra transaction có hợp lệ hay không
-                        if (!$transaction || !isset($transaction->created_at)) {
-                            continue; // Bỏ qua nếu transaction không hợp lệ
-                        }
+                    // Cộng amount vào doanh thu của tháng tương ứng
+                    $monthlyRevenue[$month] += $transaction->amount;
 
-                        // Lấy tháng từ ngày tạo transaction
-                        $month = (int) $transaction->created_at->format('m'); // Định dạng tháng: MM
-
-                        // Cộng amount vào doanh thu của tháng tương ứng
-                        $monthlyRevenue[$month] += $transaction->amount;
-                    }
                 }
             }
 
@@ -287,5 +275,5 @@ class StatisticsInstructorApiController extends Controller
             ], 500);
         }
     }
-    
+
 }

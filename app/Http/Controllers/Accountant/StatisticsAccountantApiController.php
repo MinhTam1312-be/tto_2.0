@@ -79,8 +79,8 @@ class StatisticsAccountantApiController extends Controller
                         ->pluck('id')
                 )->get()->sum(function ($transaction) {
                     $enrollment = Enrollment::find($transaction->enrollment_id);
-                    if ($enrollment && $enrollment->module) {
-                        $course = $enrollment->module->course;
+                    if ($enrollment && $enrollment) {
+                        $course = $enrollment->course;
                         if ($course) {
                             $taxAmount = ($transaction->amount * $course->tax_rate) / 100;
                             return $transaction->amount - $taxAmount; // Trừ thuế
@@ -91,8 +91,7 @@ class StatisticsAccountantApiController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                // 'totalRevenue' s=> number_format($totalRevenue, 0, ',', '.'), // Định dạng VND
-                'totalRevenue' => $totalRevenue, // Định dạng VND
+                'totalRevenue' => $totalRevenue
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -149,8 +148,8 @@ class StatisticsAccountantApiController extends Controller
                         ->pluck('id')
                 )->get()->sum(function ($transaction) {
                     $enrollment = Enrollment::find($transaction->enrollment_id);
-                    if ($enrollment && $enrollment->module) {
-                        $course = $enrollment->module->course;
+                    if ($enrollment && $enrollment) {
+                        $course = $enrollment->course;
                         if ($course) {
                             $taxAmount = ($transaction->amount * $course->tax_rate) / 100;
                             return $transaction->amount - $taxAmount; // Trừ thuế
@@ -216,8 +215,8 @@ class StatisticsAccountantApiController extends Controller
                             ->pluck('id')
                     )->get()->sum(function ($transaction) {
                         $enrollment = Enrollment::find($transaction->enrollment_id);
-                        if ($enrollment && $enrollment->module) {
-                            $course = $enrollment->module->course;
+                        if ($enrollment && $enrollment) {
+                            $course = $enrollment->course;
                             if ($course) {
                                 $taxAmount = ($transaction->amount * $course->tax_rate) / 100;
                                 return $transaction->amount - $taxAmount; // Trừ thuế
@@ -400,17 +399,8 @@ class StatisticsAccountantApiController extends Controller
                 ], 400);
             }
 
-            $module_id = Enrollment::where('id', $enrollment_id)->pluck('module_id');
+            $course_id = Enrollment::where('id', $enrollment_id)->pluck('course_id');
             $user_id = Enrollment::where('id', $enrollment_id)->pluck('user_id');
-
-            if (!$module_id) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Module ID not found',
-                ], 400);
-            }
-
-            $course_id = Module::where('id', $module_id)->pluck('course_id');
 
             if (!$course_id) {
                 return response()->json([
@@ -559,7 +549,7 @@ class StatisticsAccountantApiController extends Controller
             }
 
             // Lấy danh sách enrollment ID và module ID của user
-            $enrollments = Enrollment::where('user_id', $user_id)->get(['id', 'module_id']);
+            $enrollments = Enrollment::where('user_id', $user_id)->get(['id', 'course_id']);
 
             if ($enrollments->isEmpty()) {
                 return response()->json([
@@ -583,7 +573,7 @@ class StatisticsAccountantApiController extends Controller
             $enrollmentIds = $transactions->pluck('enrollment_id')->toArray();
 
             $enrollments = Enrollment::whereIn('id', $enrollmentIds)
-                ->with(['module.course:id,name_course']) // Load thông tin module và khóa học liên quan
+                ->with(['course:id,name_course']) // Load thông tin module và khóa học liên quan
                 ->get()
                 ->keyBy('id'); // Tạo key để tìm kiếm nhanh hơn
 
@@ -593,7 +583,7 @@ class StatisticsAccountantApiController extends Controller
                 $enrollment = $enrollments->get($transaction->enrollment_id);
 
                 // Kiểm tra dữ liệu trước khi sử dụng
-                $courseName = $enrollment?->module?->course?->name_course ?? null;
+                $courseName = $enrollment?->course?->name_course ?? null;
 
                 // Trả về thông tin giao dịch kèm khóa học
                 return [
@@ -629,8 +619,8 @@ class StatisticsAccountantApiController extends Controller
     {
         try {
             // Lấy tất cả khóa học và thông tin liên quan
-            $courses = Course::with(['modules.enrollments.transactions', 'user'])
-                ->whereHas('modules.enrollments', function ($query) {
+            $courses = Course::with(['enrollments.transactions', 'user'])
+                ->whereHas('enrollments', function ($query) {
                     $query->where('enroll', true)->where('del_flag', true);
                 })
                 ->get();
@@ -648,16 +638,15 @@ class StatisticsAccountantApiController extends Controller
             foreach ($courses as $course) {
                 $totalRevenue = 0;
 
-                foreach ($course->modules as $module) {
-                    foreach ($module->enrollments as $enrollment) {
-                        if ($enrollment->transactions) {
-                            $totalRevenue += $enrollment->transactions
-                                ->where('status', 'completed')
-                                ->where('del_flag', true)
-                                ->sum('amount');
-                        }
+                foreach ($course->enrollments as $enrollment) {
+                    if ($enrollment->transactions) {
+                        $totalRevenue += $enrollment->transactions
+                            ->where('status', 'completed')
+                            ->where('del_flag', true)
+                            ->sum('amount');
                     }
                 }
+
 
                 $coursesWithRevenue[] = [
                     'id' => $course->id,
@@ -707,7 +696,7 @@ class StatisticsAccountantApiController extends Controller
         try {
             // Lấy khóa học theo slug, tính tổng doanh thu trong query
             $course = Course::with([
-                'modules.enrollments.transactions' => function ($query) {
+                'enrollments.transactions' => function ($query) {
                     $query->where('status', 'completed')->where('del_flag', true);
                 },
                 'documents',
@@ -715,7 +704,7 @@ class StatisticsAccountantApiController extends Controller
                 'user',
             ])
                 ->where('slug_course', $slug_course)
-                ->whereHas('modules.enrollments', function ($query) {
+                ->whereHas('enrollments', function ($query) {
                     $query->where('enroll', true)->where('del_flag', true);
                 })
                 ->first();
@@ -729,7 +718,7 @@ class StatisticsAccountantApiController extends Controller
             }
 
             // Tính tổng doanh thu bằng một truy vấn SQL
-            $totalRevenue = Transaction::whereHas('enrollment.module', function ($query) use ($course) {
+            $totalRevenue = Transaction::whereHas('enrollment', function ($query) use ($course) {
                 $query->where('course_id', $course->id);
             })
                 ->where('status', 'completed')
@@ -827,8 +816,8 @@ class StatisticsAccountantApiController extends Controller
     {
         try {
             // Lấy tất cả các khóa học có liên quan
-            $courses = Course::with(['modules.enrollments.transactions'])
-                ->whereHas('modules.enrollments', function ($query) {
+            $courses = Course::with(['enrollments.transactions'])
+                ->whereHas('enrollments', function ($query) {
                     $query->where('enroll', true)->where('del_flag', true);
                 })
                 ->get();
@@ -838,17 +827,15 @@ class StatisticsAccountantApiController extends Controller
                 $transactionsCount = 0;
                 $transactionsSum = 0;
 
-                foreach ($course->modules as $module) {
-                    foreach ($module->enrollments as $enrollment) {
-                        $transactionsCount += $enrollment->transactions
-                            ->where('status', 'completed')
-                            ->where('del_flag', true)
-                            ->count();
-                        $transactionsSum += $enrollment->transactions
-                            ->where('status', 'completed')
-                            ->where('del_flag', true)
-                            ->sum('amount');
-                    }
+                foreach ($course->enrollments as $enrollment) {
+                    $transactionsCount += $enrollment->transactions
+                        ->where('status', 'completed')
+                        ->where('del_flag', true)
+                        ->count();
+                    $transactionsSum += $enrollment->transactions
+                        ->where('status', 'completed')
+                        ->where('del_flag', true)
+                        ->sum('amount');
                 }
 
                 $course->transactions_count = $transactionsCount;
@@ -886,8 +873,8 @@ class StatisticsAccountantApiController extends Controller
     {
         try {
             // Lấy tất cả các khóa học có liên quan
-            $courses = Course::with(['modules.enrollments.transactions'])
-                ->whereHas('modules.enrollments', function ($query) {
+            $courses = Course::with(['enrollments.transactions'])
+                ->whereHas('enrollments', function ($query) {
                     $query->where('enroll', true)->where('del_flag', true);
                 })
                 ->get();
@@ -896,17 +883,15 @@ class StatisticsAccountantApiController extends Controller
             $lowestEnrollmentCourse = $courses->map(function ($course) {
                 $transactionsCount = 0;
                 $transactionsSum = 0;
-                foreach ($course->modules as $module) {
-                    foreach ($module->enrollments as $enrollment) {
-                        $transactionsCount += $enrollment->transactions
-                            ->where('status', 'completed')
-                            ->where('del_flag', true)
-                            ->count();
-                        $transactionsSum += $enrollment->transactions
-                            ->where('status', 'completed')
-                            ->where('del_flag', true)
-                            ->sum('amount');
-                    }
+                foreach ($course->enrollments as $enrollment) {
+                    $transactionsCount += $enrollment->transactions
+                        ->where('status', 'completed')
+                        ->where('del_flag', true)
+                        ->count();
+                    $transactionsSum += $enrollment->transactions
+                        ->where('status', 'completed')
+                        ->where('del_flag', true)
+                        ->sum('amount');
                 }
 
                 $course->transactions_count = $transactionsCount;
@@ -945,10 +930,10 @@ class StatisticsAccountantApiController extends Controller
 
             // Load tất cả các khóa học cần thiết
             $courses = Course::with([
-                'modules.enrollments.transactions' => function ($query) {
+                'enrollments.transactions' => function ($query) {
                     $query->where('status', 'completed')->where('del_flag', true);
                 }
-            ])->whereHas('modules.enrollments', function ($query) {
+            ])->whereHas('enrollments', function ($query) {
                 $query->where('enroll', true)->where('del_flag', true);
             })->get();
 
@@ -960,14 +945,12 @@ class StatisticsAccountantApiController extends Controller
                 $transactionsCount = 0;
                 $transactionsSum = 0;
 
-                foreach ($course->modules as $module) {
-                    foreach ($module->enrollments as $enrollment) {
-                        $transaction = $enrollment->transactions; // Lấy transaction
+                foreach ($course->enrollments as $enrollment) {
+                    $transaction = $enrollment->transactions; // Lấy transaction
 
-                        if ($transaction) {
-                            $transactionsCount += 1; // Đếm số transaction
-                            $transactionsSum += $transaction->amount; // Tổng tiền từ transaction
-                        }
+                    if ($transaction) {
+                        $transactionsCount += 1; // Đếm số transaction
+                        $transactionsSum += $transaction->amount; // Tổng tiền từ transaction
                     }
                 }
 
