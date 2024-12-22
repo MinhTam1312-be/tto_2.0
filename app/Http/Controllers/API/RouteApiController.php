@@ -358,22 +358,13 @@ class RouteApiController extends Controller
             $courseIds = $modules->pluck('course_id');
             $courses = Course::whereIn('id', $courseIds)->get();
 
-            // Lấy tất cả các module mà user đã đăng ký (Enrollment)
-            $userModules = Enrollment::where('user_id', $user->id)
-                ->pluck('module_id');
-
-            // Lấy tất cả các module liên quan đến user và khóa học hiện tại
-            $relatedModules = Module::whereIn('id', $userModules)
-                ->whereIn('course_id', $courseIds)
-                ->pluck('id');
-
             // Lấy tất cả các enrollment liên quan đến user và module liên quan
-            $enrollments = Enrollment::whereIn('module_id', $relatedModules)
+            $enrollments = Enrollment::whereIn('course_id', $courseIds)
                 ->where('user_id', $user->id)
                 ->get();
 
             // Ánh xạ thông tin enrollment cho từng khóa học
-            $courses = $courses->map(function ($course) use ($enrollments, $relatedModules) {
+            $courses = $courses->map(function ($course) use ($enrollments) {
                 // Tìm enrollment liên quan đến khóa học qua các module
                 $moduleIds = Module::where('course_id', $course->id)->pluck('id');
                 $enrollment = $enrollments->firstWhere('module_id', fn($module_id) => $moduleIds->contains($module_id));
@@ -431,12 +422,12 @@ class RouteApiController extends Controller
             $enrollments = Enrollment::where('user_id', $user_id)
                 ->where('enroll', true)
                 ->where('del_flag', true)
-                ->with(['module.course.chapters.documents', 'status_docs'])
+                ->with(['course.chapters.documents', 'status_docs'])
                 ->get();
 
             // Tạo một danh sách các khóa học đã đăng ký với `progress_percentage`
             $enrollmentData = $enrollments->mapWithKeys(function ($enrollment) {
-                $course = $enrollment->module->course;
+                $course = $enrollment->course;
 
                 // Đếm số video đã xem
                 $watchedVideos = $enrollment->status_docs()->where('status_doc', true)->count();

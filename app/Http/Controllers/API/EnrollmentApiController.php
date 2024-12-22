@@ -230,10 +230,7 @@ class EnrollmentApiController extends Controller
             }
 
             // Lấy feedbacks có rating_course >= $star và slug_course = $slug_course
-            $feedbacks = Enrollment::with(['module.course', 'user']) // Lấy ra course_uuid từ module và thông tin user
-                ->whereHas('module.course', function ($query) use ($course_id) {
-                    $query->where('id', $course_id); // Lọc theo course_uuid
-                })
+            $feedbacks = Enrollment::where('course_id', $course_id)
                 ->where('rating_course', '>=', $star) // Lọc theo rating_course
                 ->limit($limit) // Giới hạn số lượng bản ghi
                 ->get();
@@ -248,7 +245,7 @@ class EnrollmentApiController extends Controller
 
             $result = $feedbacks->map(function ($feedback) {
                 return [
-                    'course_id' => optional($feedback->module->course)->id,
+                    'course_id' => optional($feedback->course)->id,
                     'user_id' => optional($feedback->user)->id,
                     'fullname' => optional($feedback->user)->fullname,
                     'avatar' => optional($feedback->user)->avatar,

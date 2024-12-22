@@ -124,7 +124,7 @@ class ReminderApiController extends Controller
         }
     }
 
-
+    // Lấy nhắc nhở theo người dùng (đã sửa)
     public function getReminder($course_id)
     {
         try {
@@ -135,7 +135,7 @@ class ReminderApiController extends Controller
             }
 
             // Lấy ra các reminder từ database
-            $result = Reminder::whereHas('enrollment.module.course', function ($query) use ($course_id, $user) {
+            $result = Reminder::whereHas('enrollment.course', function ($query) use ($course_id, $user) {
                 $query->where('course_id', $course_id); // Lọc theo course_id
             })->whereHas('enrollment', function ($query) use ($user) {
                 $query->where('user_id', $user->id); // Lọc theo user_id
@@ -160,6 +160,7 @@ class ReminderApiController extends Controller
         }
     }
 
+    // Tạo nhắc nhở (đã sửa)
     public function postReminder(Request $request)
     {
         try {
@@ -196,8 +197,7 @@ class ReminderApiController extends Controller
                 'time.array' => 'Thời gian phải là một mảng.',
                 'time.*.date_format' => 'Thời gian phải có định dạng HH:MM:SS.',
             ]);
-            $moduleIds = Module::where('course_id', $validatedData['course_id'])->pluck('id');
-            $enrollment = Enrollment::whereIn('module_id', $moduleIds)
+            $enrollment = Enrollment::where('course_id', $request->course_id)
                 ->where('user_id', $user->id)
                 ->where('enroll', true)
                 ->first();
@@ -241,6 +241,8 @@ class ReminderApiController extends Controller
             return response()->json(['error' => 'Không thể tạo nhắc nhở', 'message' => $e->getMessage()], 500);
         }
     }
+
+    // Cập nhật nhắc nhở (đã sửa)
     public function updateReminder(Request $request)
     {
         try {
@@ -275,6 +277,8 @@ class ReminderApiController extends Controller
             return response()->json(['error' => 'Không thể tạo nhắc nhở', 'message' => $e->getMessage()], 500);
         }
     }
+
+    // Lấy ra nhắc nhở với các khóa học (đã sửa)
     public function getReminderCourse()
     {
         try {
@@ -286,30 +290,25 @@ class ReminderApiController extends Controller
                 ->where('enroll', true)
                 ->where('enrollments.del_flag', true)
                 ->with([
-                    'module' => function ($query) {
-                        $query->with([
-                                'course' => function ($query) {
-                                    $query->where('courses.del_flag', true)->with([
-                                        'chapters' => function ($query) {
-                                            $query->with(['documents']); // Không kiểm tra del_flag cho documents
-                                        }
-                                    ]);
-                                }
-                            ]);
+                    'course' => function ($query) {
+                        $query->where('courses.del_flag', true)->with([
+                            'chapters' => function ($query) {
+                                $query->with(['documents']); // Không kiểm tra del_flag cho documents
+                            }
+                        ]);
                     },
                     'status_docs' => function ($query) {
                         // Không kiểm tra del_flag trong status_docs
                     }
                 ])
                 ->get();
-                    
-                // dd($enrollments);
+
+            // dd($enrollments);
             // Tạo danh sách khóa học với progress_percentage
             $coursesWithProgress = $enrollments->map(function ($enrollment) {
-                $module = $enrollment->module;
 
-                if ($module && $module->course) {
-                    $course = $module->course;
+                if ($enrollment && $enrollment->course) {
+                    $course = $enrollment->course;
                     // Đếm số video đã xem
                     $watchedVideos = $enrollment->status_docs()->where('status_doc', true)->count();
 
@@ -317,7 +316,7 @@ class ReminderApiController extends Controller
                     $numDocuments = $course->chapters->flatMap(function ($chapter) {
                         return $chapter->documents;
                     })->count();
-                    
+
 
                     // Tính phần trăm tiến độ
                     $progressPercentage = $numDocuments > 0 ? round(($watchedVideos / $numDocuments) * 100, 1) : 0;
@@ -360,7 +359,7 @@ class ReminderApiController extends Controller
             $mergedData = $coursesWithProgress->map(function ($course) use ($enrollments) {
                 // Lấy danh sách reminders liên quan đến khóa học
                 $reminders = Reminder::whereIn('enrollment_id', $enrollments->pluck('id'))
-                    ->whereHas('enrollment.module.course', function ($query) use ($course) {
+                    ->whereHas('enrollment.course', function ($query) use ($course) {
                         $query->where('id', $course['id']);
                     })
                     ->get();

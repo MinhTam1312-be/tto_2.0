@@ -10,11 +10,11 @@
 </head>
 
 <body>
-    <form action="{{ route('momo.payUrl', ['course_id' => '01JEQCBHSBVYKMJ98B5M6YMREX', 'course_price' => 99000]) }}" method="post">
+    <form action="{{ route('momo.payUrl', ['course_id' => '01JFJ7Y6BK7WGY0NN1PW5H1QR1', 'course_price' => 99000]) }}" method="post">
         @csrf
         <button type="submit" name="payUrl">MOMO</button>
     </form>
-    <form action="{{ route('vnpay.redirect', ['course_id' => '01JEQ8QT2TN1CJVNXTAPMZNEWR', 'course_price' => 10000]) }}" method="post">
+    <form action="{{ route('vnpay.redirect', ['course_id' => '01JFJ7Y6BK7WGY0NN1PW5H1QR1', 'course_price' => 10000]) }}" method="post">
         @csrf
         <button type="submit" name="redirect">VNPay</button>
     </form>
