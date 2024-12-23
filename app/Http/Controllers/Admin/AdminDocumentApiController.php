@@ -474,7 +474,7 @@ class AdminDocumentApiController extends Controller
                 'answer_question' => $request->answer_question,
                 'type_question' => $request->type_question,
                 'del_flag' => true,
-                'document_id' => $newDocument->id
+                'id' => $newDocument->id
             ]);
 
             // Ghi log khi tài liệu quiz được tạo thành công
@@ -563,7 +563,7 @@ class AdminDocumentApiController extends Controller
                 'answer_code' => $request->answer_code,
                 'tutorial_code' => $request->tutorial_code,
                 'del_flag' => true,
-                'document_id' => $newDocument->id
+                'id' => $newDocument->id
             ]);
 
             // Ghi log khi tài liệu code được tạo thành công

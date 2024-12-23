@@ -436,7 +436,7 @@ class DocumentsInstructorApiController extends Controller
                 'serial_document' => 'required|integer|min:1|max:100',
                 'content_question' => 'required|string',
                 'answer_question' => 'required|string',
-            ], [
+            ], [ 
                 'name_document.required' => 'Tên tài liệu là bắt buộc.',
                 'name_document.string' => 'Tên tài liệu phải là một chuỗi ký tự.',
                 'name_document.max' => 'Tên tài liệu không được vượt quá 255 ký tự.',
@@ -619,7 +619,7 @@ class DocumentsInstructorApiController extends Controller
             // Xác thực dữ liệu đầu vào
             $validatedData = $request->validate([
                 'name_document' => 'nullable|string|max:255',
-                'discription_document' => 'nullable|string|max:255',
+                'discription_document' => 'nullable|string',
                 'serial_document' => 'nullable|integer|max:100',
                 'type_document' => 'in:video,quiz,code',
                 'url_video' => 'nullable|url',
@@ -719,7 +719,7 @@ class DocumentsInstructorApiController extends Controller
             // Xác thực dữ liệu
             $validatedData = $request->validate([
                 'name_document' => 'nullable|string|max:255',
-                'discription_document' => 'nullable|string|max:255',
+                'discription_document' => 'nullable|string',
                 'serial_document' => 'nullable|integer|max:100',
                 'type_document' => 'in:video,quiz,code',
                 'chapter_id' => 'nullable|exists:chapters,id',

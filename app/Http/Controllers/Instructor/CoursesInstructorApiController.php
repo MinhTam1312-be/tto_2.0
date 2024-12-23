@@ -12,7 +12,7 @@ use App\Models\Route;
 use App\Services\LogActivityService;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Http\Request;
-use Str;
+use Illuminate\Support\Str;
 
 class CoursesInstructorApiController extends Controller
 {
