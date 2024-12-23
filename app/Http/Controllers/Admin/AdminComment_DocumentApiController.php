@@ -413,7 +413,7 @@ class AdminComment_DocumentApiController extends Controller
                     // dd($documentDetails);
                     // Lấy dữ liệu bổ sung dựa trên type_document
                     if ($document->type_document === 'quiz') {
-                        $quizs = Question::where('document_id', $document->id)->get();
+                        $quizs = Question::where('id', $document->id)->get();
                         $documentDetails['quizs'] = $quizs->map(function ($quiz) {
                             return [
                                 'id' => $quiz->id,
@@ -424,7 +424,7 @@ class AdminComment_DocumentApiController extends Controller
                             ];
                         });
                     } else if ($document->type_document === 'code') {
-                        $codes = Code::where('document_id', $document->id)->get();
+                        $codes = Code::where('id', $document->id)->get();
                         $documentDetails['codes'] = $codes->map(function ($code) {
                             return [
                                 'id' => $code->id,
