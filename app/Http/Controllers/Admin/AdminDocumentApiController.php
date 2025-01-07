@@ -354,7 +354,7 @@ class AdminDocumentApiController extends Controller
             // Xác thực dữ liệu đầu vào
             $validatedData = $request->validate([
                 'name_document' => 'required|string|max:255',
-                'discription_document' => 'required|string|max:255',
+                'discription_document' => 'required|string',
                 'serial_document' => 'required|min:1|max:100',
                 'url_video' => 'required|url',
                 'chapter_id' => 'required|exists:chapters,id'
@@ -431,7 +431,7 @@ class AdminDocumentApiController extends Controller
                 'type_question' => 'in:multiple_choice,fill,true_false',
                 'chapter_id' => 'required|exists:chapters,id',
                 'name_document' => 'required|string|max:255',
-                'discription_document' => 'required|string|max:255',
+                'discription_document' => 'required|string',
                 'serial_document' => 'required|min:1|max:100',
                 'content_question' => 'required',
                 'answer_question' => 'required',
@@ -518,7 +518,7 @@ class AdminDocumentApiController extends Controller
             $validatedData = $request->validate([
                 'chapter_id' => 'required|exists:chapters,id',
                 'name_document' => 'required|string|max:255',
-                'discription_document' => 'required|string|max:255',
+                'discription_document' => 'required|string',
                 'serial_document' => 'required|min:1|max:100',
                 'question_code' => 'required',
                 'answer_code' => 'required',
@@ -619,7 +619,7 @@ class AdminDocumentApiController extends Controller
             // Xác thực dữ liệu đầu vào
             $validatedData = $request->validate([
                 'name_document' => 'nullable|string|max:255',
-                'discription_document' => 'nullable|string|max:255',
+                'discription_document' => 'nullable|string',
                 'serial_document' => 'nullable|integer|max:100',
                 'type_document' => 'in:video,quiz,code',
                 'url_video' => 'nullable|url',
@@ -719,7 +719,7 @@ class AdminDocumentApiController extends Controller
             // Xác thực dữ liệu
             $validatedData = $request->validate([
                 'name_document' => 'nullable|string|max:255',
-                'discription_document' => 'nullable|string|max:255',
+                'discription_document' => 'nullable|string',
                 'serial_document' => 'nullable|integer|max:100',
                 'type_document' => 'in:video,quiz,code',
                 'chapter_id' => 'nullable|exists:chapters,id',
