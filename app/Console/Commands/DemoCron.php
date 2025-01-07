@@ -49,7 +49,7 @@ class DemoCron extends Command
 
         foreach ($reminders as $reminder) {
             $user = $reminder->enrollment->user;
-            $course = $reminder->enrollment->module->course;
+            $course = $reminder->enrollment->course;
             $fullname = $user->fullname;
             $email = $user->email;
 
