@@ -164,8 +164,8 @@ class VNPayApiController extends Controller
     }
     public function getVNPay(Request $request, $course_id, $course_price)
     {
-        $user_id = "01JFJAD8RQZ6KAEPP7JWP63Z44";
-        // $user_id = auth('api')->user()->id;
+        // $user_id = "01JFJAD8RQZ6KAEPP7JWP63Z44";
+        $user_id = auth('api')->user()->id;
         $vnp_Returnurll = route('vnpay.return', ['course_id' => $course_id, 'user_id' => $user_id]);
         $vnp_Url = env('VNP_URL');
         $vnp_Returnurl = "https://www.tto.sh/home";
