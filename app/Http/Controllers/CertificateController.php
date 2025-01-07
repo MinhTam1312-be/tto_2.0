@@ -8,8 +8,9 @@ use App\Models\Enrollment;
 use App\Models\Module;
 use Exception;
 use Illuminate\Http\Request;
-use Mail;
+
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use Illuminate\Support\Facades\Mail;
 
 class CertificateController extends Controller
 {
@@ -23,11 +24,8 @@ class CertificateController extends Controller
             // Lấy thông tin khóa học
             $course = Course::findOrFail($course_id);
 
-            // Lấy danh sách module_id của khóa học
-            $module_ids = Module::where('course_id', $course_id)->pluck('id');
-
             // Kiểm tra trạng thái Enrollment
-            $enrollment = Enrollment::whereIn('module_id', $module_ids)
+            $enrollment = Enrollment::where('course_id', $course->id)
                 ->where('user_id', $user->id)
                 ->where('status_course', 'completed')
                 ->where('enroll', true)
