@@ -71,7 +71,7 @@ class Document extends Model
     //CODE
     public function code()
     {
-        return $this->hasOne(Question::class, 'id', 'id');
+        return $this->hasOne(Code::class, 'id', 'id');
     }
 
 }
